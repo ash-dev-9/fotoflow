@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  date      DateTime
+  plan      String
+  status    String   @default("Brouillon")
+  photos    Photo[]
+  guests    Guest[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model Photo {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId       String?
+  filename     String
+  filePath     String
+  fileSize     Int
+  mimeType     String
+  metadata     String?  @default("{}")
+  isReference  Boolean  @default(false)
+  faceDescriptor String? // Stringified JSON of the face vector
+  matches      Match[]
+  uploadedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([eventId, uploadedAt])
+  @@index([userId])
+}
+
+model Guest {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  selfiePath   String
+  faceDescriptor String? // Stringified JSON of the face vector
+  status       String   @default("pending")
+  matches      Match[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  score     Float    // Distance between face descriptors
+  createdAt DateTime @default(now())
+
+  @@unique([guestId, photoId])
+  @@index([guestId])
+  @@index([photoId])
+}

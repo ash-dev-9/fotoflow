@@ -1,0 +1,173 @@
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/prisma";
+import { saveFile } from "@/lib/file-storage";
+import {
+  UnauthorizedError,
+  NotFoundError,
+  ForbiddenError,
+  ValidationError,
+  ServerError,
+  errorToResponse,
+} from "@/lib/errors";
+import { validateFile } from "@/lib/validation";
+import { extractFaceDescriptor } from "@/lib/ai/face-recognition";
+
+const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILES = 100;
+
+export async function POST(request: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      throw new UnauthorizedError("You must be logged in to upload photos");
+    }
+
+    // Parse form data
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (error) {
+      throw new ValidationError("Invalid form data");
+    }
+
+    const files = formData.getAll("files") as File[];
+    const eventId = formData.get("eventId") as string;
+
+    // Validate event ID
+    if (!eventId || typeof eventId !== "string") {
+      throw new ValidationError("Event ID is required");
+    }
+
+    if (!eventId.match(/^[a-z0-9]+$/i)) {
+      throw new ValidationError("Invalid event ID format");
+    }
+
+    // Validate files array
+    if (!files || files.length === 0) {
+      throw new ValidationError("No files provided", {
+        files: "At least one file is required",
+      });
+    }
+
+    if (files.length > MAX_FILES) {
+      throw new ValidationError(`Maximum ${MAX_FILES} files allowed per upload`, {
+        files: `Too many files (${files.length})`,
+      });
+    }
+
+    // Verify event exists and belongs to user
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, userId: true, status: true },
+    });
+
+    if (!event) {
+      throw new NotFoundError("Event not found");
+    }
+
+    if (event.userId !== userId) {
+      throw new ForbiddenError("You do not have permission to upload photos to this event");
+    }
+
+    // Upload each file
+    const uploadedPhotos = [];
+    const uploadErrors = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      // Skip empty files
+      if (!file || file.size === 0) {
+        uploadErrors.push({
+          filename: file?.name || `file_${i}`,
+          error: "File is empty",
+        });
+        continue;
+      }
+
+      // Validate file
+      const fileValidationError = validateFile(file, {
+        maxSize: MAX_FILE_SIZE,
+        allowedMimeTypes: VALID_IMAGE_TYPES,
+      });
+
+      if (fileValidationError) {
+        uploadErrors.push({
+          filename: file.name,
+          error: fileValidationError,
+        });
+        continue;
+      }
+
+      try {
+        // Save file to disk
+        const { path, size } = await saveFile(file, `events/${eventId}`);
+
+        // Create photo record in database
+        const photo = await prisma.photo.create({
+          data: {
+            eventId,
+            userId,
+            filename: file.name,
+            filePath: path,
+            fileSize: size,
+            mimeType: file.type,
+            metadata: "{}",
+          },
+          select: {
+            id: true,
+            filename: true,
+            filePath: true,
+            fileSize: true,
+            uploadedAt: true,
+          },
+        });
+
+        uploadedPhotos.push(photo);
+
+        // Extract face descriptor in background (or synchronously for now)
+        try {
+          const descriptor = await extractFaceDescriptor(path);
+          if (descriptor) {
+            await prisma.photo.update({
+              where: { id: photo.id },
+              data: { faceDescriptor: JSON.stringify(Array.from(descriptor)) },
+            });
+          }
+        } catch (aiError) {
+          console.error(`AI extraction failed for ${photo.id}:`, aiError);
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to save photo";
+        uploadErrors.push({
+          filename: file.name,
+          error: errorMessage,
+        });
+      }
+    }
+
+    // Check if any files were successfully uploaded
+    if (uploadedPhotos.length === 0 && uploadErrors.length > 0) {
+      throw new ValidationError("No files were successfully uploaded", {
+        files: uploadErrors.map((e) => e.error).join(", "),
+      });
+    }
+
+    return Response.json(
+      {
+        success: true,
+        uploadedCount: uploadedPhotos.length,
+        failedCount: uploadErrors.length,
+        uploaded: uploadedPhotos,
+        ...(uploadErrors.length > 0 && { errors: uploadErrors }),
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    return errorToResponse(error);
+  }
+}
