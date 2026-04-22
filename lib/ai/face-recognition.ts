@@ -4,36 +4,57 @@ import fs from "fs";
 let faceapi: any = null;
 let tf: any = null;
 let modelsLoaded = false;
+let aiAvailable = true;
 
 export async function loadModels() {
   if (modelsLoaded) return;
+  if (!aiAvailable) return;
 
-  // Dynamically import heavy libraries
-  if (!faceapi) faceapi = await import("@vladmandic/face-api");
-  if (!tf) tf = await import("@tensorflow/tfjs-node");
+  try {
+    // Dynamically import heavy libraries - tfjs-node may not be available on Vercel
+    if (!faceapi) faceapi = await import("@vladmandic/face-api");
+    if (!tf) {
+      try {
+        tf = await import("@tensorflow/tfjs-node");
+      } catch {
+        console.warn("AI: @tensorflow/tfjs-node not available (expected on Vercel). Face recognition disabled.");
+        aiAvailable = false;
+        return;
+      }
+    }
 
-  const modelPath = path.join(process.cwd(), "public", "models");
-  
-  // Verify models exist
-  if (!fs.existsSync(path.join(modelPath, "ssd_mobilenetv1_model-weights_manifest.json"))) {
-    throw new Error(`Models not found at ${modelPath}.`);
+    const modelPath = path.join(process.cwd(), "public", "models");
+    
+    // Verify models exist
+    if (!fs.existsSync(path.join(modelPath, "ssd_mobilenetv1_model-weights_manifest.json"))) {
+      console.warn(`AI: Models not found at ${modelPath}. Face recognition disabled.`);
+      aiAvailable = false;
+      return;
+    }
+
+    await Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromDisk(modelPath),
+      faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath),
+      faceapi.nets.faceRecognitionNet.loadFromDisk(modelPath),
+    ]);
+
+    modelsLoaded = true;
+    console.log("AI Models loaded successfully");
+  } catch (error) {
+    console.warn("AI: Failed to load models. Face recognition disabled.", error);
+    aiAvailable = false;
   }
-
-  await Promise.all([
-    faceapi.nets.ssdMobilenetv1.loadFromDisk(modelPath),
-    faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath),
-    faceapi.nets.faceRecognitionNet.loadFromDisk(modelPath),
-  ]);
-
-  modelsLoaded = true;
-  console.log("AI Models loaded successfully");
 }
 
 /**
- * Extract face descriptor from an image buffer
+ * Extract face descriptor from an image buffer.
+ * Returns null if AI is not available (e.g. on Vercel serverless).
  */
 export async function extractFaceDescriptor(imageBuffer: Buffer): Promise<Float32Array | null> {
+  if (!aiAvailable) return null;
+
   await loadModels();
+  if (!aiAvailable) return null;
 
   try {
     // Decode image into a tensor using tfjs-node
@@ -61,20 +82,17 @@ export async function extractFaceDescriptor(imageBuffer: Buffer): Promise<Float3
 
 /**
  * Compare two descriptors and return a match score (0 to 1, where 1 is perfect match)
- * face-api uses Euclidean distance, so we convert it to a score.
  * Distance < 0.6 is usually considered a match.
  */
 export function compareDescriptors(desc1: Float32Array, desc2: Float32Array): number {
-  // Manual Euclidean distance calculation to avoid dependency on faceapi for simple math
   let sum = 0;
   for (let i = 0; i < desc1.length; i++) {
     sum += Math.pow(desc1[i] - desc2[i], 2);
   }
   const distance = Math.sqrt(sum);
-  
-  // Convert distance to a simplified score for the user
   const score = Math.max(0, 1 - distance);
   return score;
 }
 
-export const FACE_MATCH_THRESHOLD = 0.6; // Euclidean distance threshold
+export const FACE_MATCH_THRESHOLD = 0.6;
+
