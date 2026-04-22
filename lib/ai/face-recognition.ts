@@ -15,6 +15,7 @@ export async function loadModels() {
     if (!faceapi) faceapi = await import("@vladmandic/face-api");
     if (!tf) {
       try {
+        // @ts-ignore - tfjs-node is an optional dependency, not available on Vercel
         tf = await import("@tensorflow/tfjs-node");
       } catch {
         console.warn("AI: @tensorflow/tfjs-node not available (expected on Vercel). Face recognition disabled.");
