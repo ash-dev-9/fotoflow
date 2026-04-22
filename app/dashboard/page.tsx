@@ -7,11 +7,18 @@ export default async function DashboardPage() {
   const { prisma } = await import("@/lib/prisma");
   const { userId } = await auth();
   const user = await currentUser();
-  const eventCount = userId
-    ? await prisma.event.count({
+  let eventCount = 0;
+  let dbError = null;
+
+  try {
+    if (userId) {
+      eventCount = await prisma.event.count({
         where: { userId },
-      })
-    : 0;
+      });
+    }
+  } catch (error: any) {
+    dbError = error.message || String(error);
+  }
 
   return (
     <main className="min-h-screen bg-[#111827] px-4 py-16 text-slate-100">
@@ -48,6 +55,13 @@ export default async function DashboardPage() {
             <p className="mt-1 text-sm">0 (placeholder)</p>
           </div>
         </div>
+
+        {dbError && (
+          <div className="mt-6 rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-red-200">
+            <p className="text-xs font-semibold uppercase tracking-wider">Erreur Base de Donnees</p>
+            <pre className="mt-2 whitespace-pre-wrap text-xs font-mono">{dbError}</pre>
+          </div>
+        )}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Link

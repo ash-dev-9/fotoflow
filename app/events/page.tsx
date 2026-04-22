@@ -11,15 +11,22 @@ export default async function EventsPage() {
     return null;
   }
 
-  const events = await prisma.event.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      photos: {
-        select: { id: true },
+  let events: any[] = [];
+  let dbError = null;
+
+  try {
+    events = await prisma.event.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        photos: {
+          select: { id: true },
+        },
       },
-    },
-  });
+    });
+  } catch (error: any) {
+    dbError = error.message || String(error);
+  }
 
   return (
     <main className="min-h-screen bg-[#111827] px-4 py-16 text-slate-100">
@@ -40,7 +47,14 @@ export default async function EventsPage() {
         </div>
 
         <div className="space-y-3">
-          {events.length === 0 ? (
+          {dbError && (
+            <div className="rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-red-200">
+              <p className="text-xs font-semibold uppercase tracking-wider">Erreur Base de Donnees</p>
+              <pre className="mt-2 whitespace-pre-wrap text-xs font-mono">{dbError}</pre>
+            </div>
+          )}
+
+          {events.length === 0 && !dbError ? (
             <div className="rounded-xl border border-dashed border-white/15 bg-slate-950/40 p-6 text-center">
               <p className="text-sm text-slate-300">Aucun evenement pour le moment.</p>
               <Link
