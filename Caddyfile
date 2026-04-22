@@ -1,0 +1,5 @@
+# Remplacez ceci par votre sous-domaine DuckDNS (ex: mon-super-event.duckdns.org)
+# Caddy va automatiquement générer et renouveler le certificat HTTPS !
+fotoflow.duckdns.org {
+    reverse_proxy fotoflow:3000
+}

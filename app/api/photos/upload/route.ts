@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { saveFile } from "@/lib/file-storage";
 import {
   UnauthorizedError,
   NotFoundError,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/errors";
 import { validateFile } from "@/lib/validation";
 import { extractFaceDescriptor } from "@/lib/ai/face-recognition";
+import { supabaseAdmin } from "@/lib/supabase";
 
 const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -101,8 +101,27 @@ export async function POST(request: Request) {
       }
 
       try {
-        // Save file to disk
-        const { path, size } = await saveFile(file, `events/${eventId}`);
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+        const filePath = `events/${eventId}/${fileName}`;
+
+        // Upload to Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabaseAdmin
+          .storage
+          .from('photos')
+          .upload(filePath, buffer, {
+            contentType: file.type,
+            upsert: false
+          });
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabaseAdmin
+          .storage
+          .from('photos')
+          .getPublicUrl(filePath);
 
         // Create photo record in database
         const photo = await prisma.photo.create({
@@ -110,8 +129,8 @@ export async function POST(request: Request) {
             eventId,
             userId,
             filename: file.name,
-            filePath: path,
-            fileSize: size,
+            filePath: publicUrl,
+            fileSize: file.size,
             mimeType: file.type,
             metadata: "{}",
           },
@@ -126,9 +145,9 @@ export async function POST(request: Request) {
 
         uploadedPhotos.push(photo);
 
-        // Extract face descriptor in background (or synchronously for now)
+        // Extract face descriptor using the buffer
         try {
-          const descriptor = await extractFaceDescriptor(path);
+          const descriptor = await extractFaceDescriptor(buffer);
           if (descriptor) {
             await prisma.photo.update({
               where: { id: photo.id },

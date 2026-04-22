@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  fotoflow:
+    build: .
+    restart: unless-stopped
+    volumes:
+      # Persist the SQLite database
+      - ./data:/app/data
+      # Persist the uploaded photos
+      - ./public/uploads:/app/public/uploads
+    env_file:
+      - .env
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - fotoflow
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -2,11 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: [
-    "@vladmandic/face-api",
-    "@tensorflow/tfjs-node",
-    "canvas",
-  ],
+  serverExternalPackages: ["canvas", "@tensorflow/tfjs-node"],
+  output: "standalone",
 };
 
 export default nextConfig;

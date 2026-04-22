@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Share2, Copy, Check } from "lucide-react";
@@ -18,9 +18,11 @@ export default function EventDetailsPage({ params }: EventDetailsProps) {
   const [copied, setCopied] = useState(false);
   const router = useRouter();
 
-  const publicUrl = typeof window !== "undefined" 
-    ? `${window.location.origin}/e/${id}`
-    : "";
+  const [publicUrl, setPublicUrl] = useState("");
+
+  useEffect(() => {
+    setPublicUrl(`${window.location.origin}/e/${id}`);
+  }, [id]);
 
   const handleUploadComplete = () => {
     setRefreshGallery((prev) => !prev);

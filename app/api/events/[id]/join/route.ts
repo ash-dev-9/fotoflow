@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { saveFile } from "@/lib/file-storage";
 import {
   NotFoundError,
   ValidationError,
@@ -10,6 +9,7 @@ import {
   compareDescriptors, 
   FACE_MATCH_THRESHOLD 
 } from "@/lib/ai/face-recognition";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
@@ -35,21 +35,39 @@ export async function POST(
       throw new NotFoundError("Event not found");
     }
 
-    // Save selfie to disk
-    const { path } = await saveFile(selfie, `events/${eventId}/guests`);
+    // Save selfie to Supabase
+    const buffer = Buffer.from(await selfie.arrayBuffer());
+    const fileExt = selfie.name.split('.').pop() || 'jpg';
+    const fileName = `guest-${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+    const filePath = `events/${eventId}/guests/${fileName}`;
+
+    const { data: uploadData, error: uploadError } = await supabaseAdmin
+      .storage
+      .from('photos')
+      .upload(filePath, buffer, {
+        contentType: selfie.type,
+        upsert: false
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabaseAdmin
+      .storage
+      .from('photos')
+      .getPublicUrl(filePath);
 
     // Create guest record
     const guest = await prisma.guest.create({
       data: {
         eventId,
-        selfiePath: path,
+        selfiePath: publicUrl,
         status: "pending",
       },
     });
 
     // --- AI MAGIC START ---
     try {
-      const guestDescriptor = await extractFaceDescriptor(path);
+      const guestDescriptor = await extractFaceDescriptor(buffer);
       
       if (guestDescriptor) {
         await prisma.guest.update({
@@ -84,15 +102,12 @@ export async function POST(
           }
         }
 
-        // Create matches individually (SQLite doesn't support createMany skipDuplicates)
+        // Batch create matches
         if (matches.length > 0) {
-          for (const match of matches) {
-            try {
-              await prisma.match.create({ data: match });
-            } catch {
-              // Skip duplicates
-            }
-          }
+          await prisma.match.createMany({
+            data: matches,
+            skipDuplicates: true
+          });
         }
 
         console.log(`AI: Found ${matches.length} matches for guest ${guest.id}`);

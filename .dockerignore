@@ -1,0 +1,11 @@
+Dockerfile
+.dockerignore
+node_modules
+npm-debug.log
+README.md
+.next
+.git
+public/uploads/*
+dev.db
+dev.db-journal
+.env

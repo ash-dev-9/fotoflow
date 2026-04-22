@@ -1,25 +1,14 @@
+# Secrets
+.env
+.env.local
+.env.*.local
 
-# clerk configuration (can include secrets)
-/.clerk/
-
-/app/generated/prisma
-
-# Uploaded files
-/public/uploads/
-
-# AI Models (too large for git)
-/public/models/
+# Database
+dev.db
+dev.db-journal
 
 # Next.js
 .next/
 *.log
-
-# Dependencies
-node_modules/
-
-# Database
-*.db
-
-# Environment
-.env
-.env.local
+node_modules
+/public/uploads/
