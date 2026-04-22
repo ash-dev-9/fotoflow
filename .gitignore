@@ -3,9 +3,10 @@
 .env.local
 .env.*.local
 
-# Database
-dev.db
-dev.db-journal
+# Prisma
+/prisma/generated/client
+/prisma/dev.db
+/prisma/dev.db-journal
 
 # Next.js
 .next/
