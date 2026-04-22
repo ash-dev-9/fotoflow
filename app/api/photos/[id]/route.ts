@@ -1,5 +1,6 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
 import { deleteFile } from "@/lib/file-storage";
 
 export async function DELETE(
@@ -7,6 +8,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { prisma } = await import("@/lib/prisma");
     const { userId } = await auth();
     if (!userId) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,9 +1,11 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { Calendar, Images } from "lucide-react";
 
 export default async function EventsPage() {
+  const { prisma } = await import("@/lib/prisma");
   const { userId } = await auth();
   if (!userId) {
     return null;

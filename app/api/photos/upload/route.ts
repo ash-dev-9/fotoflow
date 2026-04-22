@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
 import {
   UnauthorizedError,
   NotFoundError,
@@ -11,8 +11,6 @@ import {
   errorToResponse,
 } from "@/lib/errors";
 import { validateFile } from "@/lib/validation";
-import { extractFaceDescriptor } from "@/lib/ai/face-recognition";
-import { supabaseAdmin } from "@/lib/supabase";
 
 const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
@@ -20,6 +18,9 @@ const MAX_FILES = 100;
 
 export async function POST(request: Request) {
   try {
+    const { prisma } = await import("@/lib/prisma");
+    const { supabaseAdmin } = await import("@/lib/supabase");
+
     const { userId } = await auth();
     if (!userId) {
       throw new UnauthorizedError("You must be logged in to upload photos");
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
 
         // Extract face descriptor using the buffer
         try {
+          const { extractFaceDescriptor } = await import("@/lib/ai/face-recognition");
           const descriptor = await extractFaceDescriptor(buffer);
           if (descriptor) {
             await prisma.photo.update({
@@ -192,3 +194,4 @@ export async function POST(request: Request) {
     return errorToResponse(error);
   }
 }
+

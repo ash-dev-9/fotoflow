@@ -2,7 +2,6 @@ import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 
 async function createEvent(formData: FormData) {
   "use server";
@@ -19,6 +18,8 @@ async function createEvent(formData: FormData) {
   if (!name || !date) {
     redirect("/events/new");
   }
+
+  const { prisma } = await import("@/lib/prisma");
 
   await prisma.event.create({
     data: {

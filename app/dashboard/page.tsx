@@ -1,8 +1,10 @@
+export const dynamic = "force-dynamic";
+
 import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
+  const { prisma } = await import("@/lib/prisma");
   const { userId } = await auth();
   const user = await currentUser();
   const eventCount = userId

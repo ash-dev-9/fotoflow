@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
+
 import { NotFoundError, errorToResponse } from "@/lib/errors";
 
 export async function GET(
@@ -6,6 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { prisma } = await import("@/lib/prisma");
     const { id: guestId } = await params;
     
     // Find matches for this guest

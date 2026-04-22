@@ -1,23 +1,20 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-import { prisma } from "@/lib/prisma";
 import {
   NotFoundError,
   ValidationError,
   errorToResponse,
 } from "@/lib/errors";
-import { 
-  extractFaceDescriptor, 
-  compareDescriptors, 
-  FACE_MATCH_THRESHOLD 
-} from "@/lib/ai/face-recognition";
-import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { prisma } = await import("@/lib/prisma");
+    const { supabaseAdmin } = await import("@/lib/supabase");
+
     const { id: eventId } = await params;
     
     // Parse form data
@@ -69,6 +66,9 @@ export async function POST(
 
     // --- AI MAGIC START ---
     try {
+      const { extractFaceDescriptor, compareDescriptors, FACE_MATCH_THRESHOLD } = 
+        await import("@/lib/ai/face-recognition");
+
       const guestDescriptor = await extractFaceDescriptor(buffer);
       
       if (guestDescriptor) {
@@ -94,7 +94,6 @@ export async function POST(
           const photoDescriptor = new Float32Array(JSON.parse(photo.faceDescriptor!));
           const score = compareDescriptors(guestDescriptor, photoDescriptor);
           
-          // Match if distance < threshold (score > 1 - threshold)
           if (score >= (1 - FACE_MATCH_THRESHOLD)) {
             matches.push({
               guestId: guest.id,
@@ -129,3 +128,4 @@ export async function POST(
     return errorToResponse(error);
   }
 }
+
