@@ -1,12 +1,16 @@
-import * as faceapi from "@vladmandic/face-api";
-import * as tf from "@tensorflow/tfjs-node";
 import path from "path";
 import fs from "fs";
 
+let faceapi: any = null;
+let tf: any = null;
 let modelsLoaded = false;
 
 export async function loadModels() {
   if (modelsLoaded) return;
+
+  // Dynamically import heavy libraries
+  if (!faceapi) faceapi = await import("@vladmandic/face-api");
+  if (!tf) tf = await import("@tensorflow/tfjs-node");
 
   const modelPath = path.join(process.cwd(), "public", "models");
   
@@ -61,11 +65,14 @@ export async function extractFaceDescriptor(imageBuffer: Buffer): Promise<Float3
  * Distance < 0.6 is usually considered a match.
  */
 export function compareDescriptors(desc1: Float32Array, desc2: Float32Array): number {
-  const distance = faceapi.euclideanDistance(desc1, desc2);
+  // Manual Euclidean distance calculation to avoid dependency on faceapi for simple math
+  let sum = 0;
+  for (let i = 0; i < desc1.length; i++) {
+    sum += Math.pow(desc1[i] - desc2[i], 2);
+  }
+  const distance = Math.sqrt(sum);
+  
   // Convert distance to a simplified score for the user
-  // 0 distance = 1.0 score
-  // 0.6 distance = 0.5 score
-  // > 1.0 distance = 0.0 score
   const score = Math.max(0, 1 - distance);
   return score;
 }
