@@ -148,18 +148,22 @@ export async function POST(request: Request) {
 
         uploadedPhotos.push(photo);
 
-        // Extract face descriptor using the buffer
+        // Retrieve descriptor from formData array
         try {
-          const { extractFaceDescriptor } = await import("@/lib/ai/face-recognition");
-          const descriptor = await extractFaceDescriptor(buffer);
-          if (descriptor) {
-            await prisma.photo.update({
-              where: { id: photo.id },
-              data: { faceDescriptor: JSON.stringify(Array.from(descriptor)) },
-            });
+          const descriptorsStr = formData.get("faceDescriptors") as string | null;
+          if (descriptorsStr) {
+            const descriptorsArray = JSON.parse(descriptorsStr);
+            const descriptor = descriptorsArray[i]; // match by index since files are iterated in order
+            
+            if (descriptor) {
+              await prisma.photo.update({
+                where: { id: photo.id },
+                data: { faceDescriptor: JSON.stringify(descriptor) },
+              });
+            }
           }
         } catch (aiError) {
-          console.error(`AI extraction failed for ${photo.id}:`, aiError);
+          console.error(`AI matching failed to parse descriptor for ${photo.id}:`, aiError);
         }
       } catch (error) {
         const errorMessage =

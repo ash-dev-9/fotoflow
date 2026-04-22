@@ -35,12 +35,15 @@ export default function GuestPage({ params }: GuestPageProps) {
     fetchEvent();
   }, [id]);
 
-  const handleCapture = async (blob: Blob) => {
+  const handleCapture = async (blob: Blob, descriptor: number[] | null) => {
     setUploading(true);
     setStep("processing");
     
     const formData = new FormData();
     formData.append("selfie", blob, "selfie.jpg");
+    if (descriptor) {
+      formData.append("faceDescriptor", JSON.stringify(descriptor));
+    }
 
     try {
       const res = await fetch(`/api/events/${id}/join`, {

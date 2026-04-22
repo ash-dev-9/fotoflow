@@ -66,16 +66,15 @@ export async function POST(
 
     // --- AI MAGIC START ---
     try {
-      const { extractFaceDescriptor, compareDescriptors, FACE_MATCH_THRESHOLD } = 
-        await import("@/lib/ai/face-recognition");
-
-      const guestDescriptor = await extractFaceDescriptor(buffer);
+      const faceDescriptorStr = formData.get("faceDescriptor") as string | null;
       
-      if (guestDescriptor) {
+      if (faceDescriptorStr) {
+        const guestDescriptor = JSON.parse(faceDescriptorStr) as number[];
+        
         await prisma.guest.update({
           where: { id: guest.id },
           data: { 
-            faceDescriptor: JSON.stringify(Array.from(guestDescriptor)),
+            faceDescriptor: faceDescriptorStr,
             status: "ready"
           },
         });
@@ -89,9 +88,11 @@ export async function POST(
           },
         });
 
+        const { compareDescriptors, FACE_MATCH_THRESHOLD } = await import("@/lib/ai/face-recognition");
+
         const matches = [];
         for (const photo of eventPhotos) {
-          const photoDescriptor = new Float32Array(JSON.parse(photo.faceDescriptor!));
+          const photoDescriptor = JSON.parse(photo.faceDescriptor!) as number[];
           const score = compareDescriptors(guestDescriptor, photoDescriptor);
           
           if (score >= (1 - FACE_MATCH_THRESHOLD)) {

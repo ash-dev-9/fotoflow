@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Camera, RefreshCw, Check, X, Sparkles } from "lucide-react";
 
+import * as faceapi from "@vladmandic/face-api";
+
 interface SelfieCaptureProps {
-  onCapture: (blob: Blob) => void;
+  onCapture: (blob: Blob, descriptor: number[] | null) => void;
   onReset: () => void;
 }
 
@@ -12,8 +14,29 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isModelLoading, setIsModelLoading] = useState(true);
+  const [isExtracting, setIsExtracting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Load face-api models on mount
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+        ]);
+        setIsModelLoading(false);
+      } catch (err) {
+        console.error("Error loading models", err);
+        setError("Erreur lors du chargement de l'IA de reconnaissance faciale.");
+        setIsModelLoading(false);
+      }
+    };
+    loadModels();
+  }, []);
 
   useEffect(() => {
     if (!capturedImage) {
@@ -46,8 +69,8 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
     }
   };
 
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
+  const capturePhoto = async () => {
+    if (videoRef.current && canvasRef.current && !isModelLoading) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
@@ -63,15 +86,34 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
         // Convert to data URL for preview
         const dataUrl = canvas.toDataURL("image/jpeg");
         setCapturedImage(dataUrl);
-        
-        // Convert to blob for upload
-        canvas.toBlob((blob) => {
-          if (blob) {
-            onCapture(blob);
-          }
-        }, "image/jpeg", 0.95);
-        
         stopCamera();
+
+        setIsExtracting(true);
+        try {
+          // Extract face descriptor from canvas
+          const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+          const descriptor = detection ? Array.from(detection.descriptor) : null;
+          
+          if (!descriptor) {
+            setError("Aucun visage détecté. Veuillez réessayer dans un endroit bien éclairé.");
+          }
+          
+          // Convert to blob for upload
+          canvas.toBlob((blob) => {
+            if (blob) {
+              onCapture(blob, descriptor);
+            }
+          }, "image/jpeg", 0.95);
+        } catch (err) {
+          console.error("Extraction error:", err);
+          setError("Erreur lors de l'analyse du visage.");
+          // Still capture but without descriptor
+          canvas.toBlob((blob) => {
+            if (blob) onCapture(blob, null);
+          }, "image/jpeg", 0.95);
+        } finally {
+          setIsExtracting(false);
+        }
       }
     }
   };
@@ -114,7 +156,8 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
               <div className="absolute bottom-8 left-0 right-0 flex justify-center">
                 <button
                   onClick={capturePhoto}
-                  className="group relative flex h-20 w-20 items-center justify-center rounded-full bg-white transition hover:scale-110 active:scale-95"
+                  disabled={isModelLoading || isExtracting}
+                  className="group relative flex h-20 w-20 items-center justify-center rounded-full bg-white transition hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
                   <div className="h-16 w-16 rounded-full border-4 border-slate-950 bg-white" />
                   <div className="absolute -inset-2 animate-pulse rounded-full border-2 border-white/20 group-hover:border-white/40" />
@@ -160,9 +203,13 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
           {capturedImage ? "Photo prise !" : "Prenez un selfie"}
         </h3>
         <p className="mt-2 text-sm text-slate-400">
-          {capturedImage 
-            ? "Nous allons scanner la galerie pour trouver vos photos." 
-            : "Cadrez votre visage pour que l'IA puisse vous identifier."}
+          {isModelLoading 
+            ? "Chargement de l'IA (patientez...)" 
+            : isExtracting 
+              ? "Analyse du visage en cours..."
+              : capturedImage 
+                ? "Nous allons scanner la galerie pour trouver vos photos." 
+                : "Cadrez votre visage pour que l'IA puisse vous identifier."}
         </p>
       </div>
     </div>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, X, Check, AlertCircle } from "lucide-react";
+import * as faceapi from "@vladmandic/face-api";
 
 interface PhotoUploadProps {
   eventId: string;
@@ -20,7 +21,47 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<UploadStatus[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [isModelLoading, setIsModelLoading] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+        ]);
+        setIsModelLoading(false);
+      } catch (err) {
+        console.error("Error loading models", err);
+        setIsModelLoading(false);
+      }
+    };
+    loadModels();
+  }, []);
+
+  const extractFaceDescriptor = async (file: File): Promise<number[] | null> => {
+    if (isModelLoading) return null;
+    return new Promise((resolve) => {
+      const img = document.createElement('img');
+      img.onload = async () => {
+        try {
+          const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+          URL.revokeObjectURL(img.src);
+          resolve(detection ? Array.from(detection.descriptor) : null);
+        } catch (err) {
+          console.error("Face extraction error", err);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        resolve(null);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -65,8 +106,23 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
       }))
     );
 
+    // Extract descriptors sequentially to avoid memory spikes
+    const descriptors: (number[] | null)[] = [];
+    for (const file of files) {
+      setUploadStatus((prev) =>
+        prev.map((s) =>
+          s.filename === file.name
+            ? { ...s, status: "uploading", progress: 0 }
+            : s
+        )
+      );
+      const desc = await extractFaceDescriptor(file);
+      descriptors.push(desc);
+    }
+
     const formData = new FormData();
     formData.append("eventId", eventId);
+    formData.append("faceDescriptors", JSON.stringify(descriptors));
 
     files.forEach((file) => {
       formData.append("files", file);
