@@ -92,22 +92,38 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
       const context = canvas.getContext("2d");
 
       if (context) {
-        // Set canvas size to video size
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
+        // Set canvas size to video size, but capped at 800px to avoid mobile WebGL crash
+        const MAX_SIZE = 800;
+        let width = video.videoWidth || 640;
+        let height = video.videoHeight || 480;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height *= MAX_SIZE / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width *= MAX_SIZE / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
         
         // Draw the current frame
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        context.drawImage(video, 0, 0, width, height);
         
         // Convert to data URL for preview
-        const dataUrl = canvas.toDataURL("image/jpeg");
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
         setCapturedImage(dataUrl);
         stopCamera();
         
         // Convert to blob and save
         canvas.toBlob((blob) => {
           if (blob) setCapturedBlob(blob);
-        }, "image/jpeg", 0.95);
+        }, "image/jpeg", 0.9);
 
         if (!isModelLoading) {
           setIsExtracting(true);
@@ -121,7 +137,7 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
               setCapturedDescriptor(descriptor);
               setIsExtracting(false);
               if (!descriptor) {
-                setError("Aucun visage détecté. Veuillez réessayer dans un endroit bien éclairé.");
+                setError("Aucun visage détecté. Veuillez réessayer dans un endroit bien éclairé et de face.");
               }
             };
 
@@ -131,7 +147,21 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
             }, 10000);
 
             try {
-              const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+              // Create a temp canvas attached to DOM to ensure faceapi can read dimensions properly
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = canvas.width;
+              tempCanvas.height = canvas.height;
+              const tempCtx = tempCanvas.getContext('2d');
+              if (tempCtx) tempCtx.drawImage(canvas, 0, 0);
+
+              tempCanvas.style.display = 'none';
+              document.body.appendChild(tempCanvas);
+
+              const detection = await faceapi.detectSingleFace(tempCanvas).withFaceLandmarks().withFaceDescriptor();
+              
+              if (document.body.contains(tempCanvas)) {
+                document.body.removeChild(tempCanvas);
+              }
               clearTimeout(timeoutId);
               finish(detection ? Array.from(detection.descriptor) : null);
             } catch (err) {
@@ -139,7 +169,7 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
               clearTimeout(timeoutId);
               finish(null);
             }
-          }, 50);
+          }, 100);
         }
       }
     }
