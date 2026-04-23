@@ -11,7 +11,7 @@ interface PhotoUploadProps {
 
 interface UploadStatus {
   filename: string;
-  status: "pending" | "uploading" | "success" | "error";
+  status: "pending" | "extracting" | "uploading" | "success" | "error";
   error?: string;
   progress?: number;
 }
@@ -47,11 +47,40 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
       const img = document.createElement('img');
       img.onload = async () => {
         try {
-          const detection = await faceapi.detectSingleFace(img).withFaceLandmarks().withFaceDescriptor();
+          // Resize image to max 800px width/height to avoid WebGL crash on high-res photos
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            URL.revokeObjectURL(img.src);
+            return resolve(null);
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
           URL.revokeObjectURL(img.src);
           resolve(detection ? Array.from(detection.descriptor) : null);
         } catch (err) {
           console.error("Face extraction error", err);
+          URL.revokeObjectURL(img.src);
           resolve(null);
         }
       };
@@ -112,12 +141,21 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
       setUploadStatus((prev) =>
         prev.map((s) =>
           s.filename === file.name
-            ? { ...s, status: "uploading", progress: 0 }
+            ? { ...s, status: "extracting" }
             : s
         )
       );
+      
       const desc = await extractFaceDescriptor(file);
       descriptors.push(desc);
+      
+      setUploadStatus((prev) =>
+        prev.map((s) =>
+          s.filename === file.name
+            ? { ...s, status: "uploading" }
+            : s
+        )
+      );
     }
 
     const formData = new FormData();
@@ -270,10 +308,19 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
                 </p>
                 <div className="flex items-center gap-2">
                   {status.status === "pending" && (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-[#5B7CFF]" />
+                    <span className="text-xs text-slate-400">En attente...</span>
+                  )}
+                  {status.status === "extracting" && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#5B7CFF]">Analyse IA...</span>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-[#5B7CFF]" />
+                    </div>
                   )}
                   {status.status === "uploading" && (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-[#5B7CFF]" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#5B7CFF]">Envoi...</span>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-400 border-t-[#5B7CFF]" />
+                    </div>
                   )}
                   {status.status === "success" && (
                     <Check className="h-4 w-4 text-green-500" />
