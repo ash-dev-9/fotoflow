@@ -16,26 +16,42 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
   const [error, setError] = useState<string | null>(null);
   const [isModelLoading, setIsModelLoading] = useState(true);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+  const [capturedDescriptor, setCapturedDescriptor] = useState<number[] | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Load face-api models on mount
   useEffect(() => {
+    let isMounted = true;
     const loadModels = async () => {
+      // Force loading to finish after 10 seconds to prevent getting stuck
+      const timeoutId = setTimeout(() => {
+        if (isMounted) {
+          console.warn("Model loading timed out");
+          setIsModelLoading(false);
+        }
+      }, 10000);
+
       try {
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
           faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
           faceapi.nets.faceRecognitionNet.loadFromUri('/models')
         ]);
-        setIsModelLoading(false);
+        if (isMounted) setIsModelLoading(false);
       } catch (err) {
         console.error("Error loading models", err);
-        setError("Erreur lors du chargement de l'IA de reconnaissance faciale.");
-        setIsModelLoading(false);
+        if (isMounted) setIsModelLoading(false);
+      } finally {
+        clearTimeout(timeoutId);
       }
     };
     loadModels();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -70,15 +86,15 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
   };
 
   const capturePhoto = async () => {
-    if (videoRef.current && canvasRef.current && !isModelLoading) {
+    if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext("2d");
 
       if (context) {
         // Set canvas size to video size
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
         
         // Draw the current frame
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -87,32 +103,43 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
         const dataUrl = canvas.toDataURL("image/jpeg");
         setCapturedImage(dataUrl);
         stopCamera();
+        
+        // Convert to blob and save
+        canvas.toBlob((blob) => {
+          if (blob) setCapturedBlob(blob);
+        }, "image/jpeg", 0.95);
 
-        setIsExtracting(true);
-        try {
-          // Extract face descriptor from canvas
-          const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
-          const descriptor = detection ? Array.from(detection.descriptor) : null;
+        if (!isModelLoading) {
+          setIsExtracting(true);
           
-          if (!descriptor) {
-            setError("Aucun visage détecté. Veuillez réessayer dans un endroit bien éclairé.");
-          }
-          
-          // Convert to blob for upload
-          canvas.toBlob((blob) => {
-            if (blob) {
-              onCapture(blob, descriptor);
+          // Yield to main thread so the UI can paint the captured photo before heavy AI task
+          setTimeout(async () => {
+            let isResolved = false;
+            const finish = (descriptor: number[] | null) => {
+              if (isResolved) return;
+              isResolved = true;
+              setCapturedDescriptor(descriptor);
+              setIsExtracting(false);
+              if (!descriptor) {
+                setError("Aucun visage détecté. Veuillez réessayer dans un endroit bien éclairé.");
+              }
+            };
+
+            const timeoutId = setTimeout(() => {
+              console.warn("Face extraction timed out");
+              finish(null);
+            }, 10000);
+
+            try {
+              const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+              clearTimeout(timeoutId);
+              finish(detection ? Array.from(detection.descriptor) : null);
+            } catch (err) {
+              console.error("Extraction error:", err);
+              clearTimeout(timeoutId);
+              finish(null);
             }
-          }, "image/jpeg", 0.95);
-        } catch (err) {
-          console.error("Extraction error:", err);
-          setError("Erreur lors de l'analyse du visage.");
-          // Still capture but without descriptor
-          canvas.toBlob((blob) => {
-            if (blob) onCapture(blob, null);
-          }, "image/jpeg", 0.95);
-        } finally {
-          setIsExtracting(false);
+          }, 50);
         }
       }
     }
@@ -120,7 +147,15 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
 
   const resetCapture = () => {
     setCapturedImage(null);
+    setCapturedBlob(null);
+    setCapturedDescriptor(null);
     onReset();
+  };
+
+  const handleConfirm = () => {
+    if (capturedBlob) {
+      onCapture(capturedBlob, capturedDescriptor);
+    }
   };
 
   return (
@@ -156,7 +191,7 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
               <div className="absolute bottom-8 left-0 right-0 flex justify-center">
                 <button
                   onClick={capturePhoto}
-                  disabled={isModelLoading || isExtracting}
+                  disabled={isModelLoading}
                   className="group relative flex h-20 w-20 items-center justify-center rounded-full bg-white transition hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
                   <div className="h-16 w-16 rounded-full border-4 border-slate-950 bg-white" />
@@ -181,9 +216,13 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
                 >
                   <RefreshCw className="h-6 w-6" />
                 </button>
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                <button
+                  onClick={handleConfirm}
+                  disabled={isExtracting}
+                  className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] disabled:opacity-50 disabled:grayscale transition hover:bg-green-400"
+                >
                   <Check className="h-6 w-6" />
-                </div>
+                </button>
               </div>
             </>
           )}
