@@ -44,6 +44,20 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
   const extractFaceDescriptor = async (file: File): Promise<number[] | null> => {
     if (isModelLoading) return null;
     return new Promise((resolve) => {
+      let isResolved = false;
+      const finish = (res: number[] | null) => {
+        if (!isResolved) {
+          isResolved = true;
+          resolve(res);
+        }
+      };
+
+      // Force resolve after 15 seconds to avoid infinite hangs
+      const timeoutId = setTimeout(() => {
+        console.warn("Face extraction timed out for", file.name);
+        finish(null);
+      }, 15000);
+
       const img = document.createElement('img');
       img.onload = async () => {
         try {
@@ -71,22 +85,33 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
           
           if (!ctx) {
             URL.revokeObjectURL(img.src);
-            return resolve(null);
+            clearTimeout(timeoutId);
+            return finish(null);
           }
 
           ctx.drawImage(img, 0, 0, width, height);
+          
+          // Append to body temporarily as faceapi sometimes expects elements in DOM
+          canvas.style.display = 'none';
+          document.body.appendChild(canvas);
+
           const detection = await faceapi.detectSingleFace(canvas).withFaceLandmarks().withFaceDescriptor();
+          
+          document.body.removeChild(canvas);
           URL.revokeObjectURL(img.src);
-          resolve(detection ? Array.from(detection.descriptor) : null);
+          clearTimeout(timeoutId);
+          finish(detection ? Array.from(detection.descriptor) : null);
         } catch (err) {
           console.error("Face extraction error", err);
           URL.revokeObjectURL(img.src);
-          resolve(null);
+          clearTimeout(timeoutId);
+          finish(null);
         }
       };
       img.onerror = () => {
         URL.revokeObjectURL(img.src);
-        resolve(null);
+        clearTimeout(timeoutId);
+        finish(null);
       };
       img.src = URL.createObjectURL(file);
     });
