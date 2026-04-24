@@ -186,65 +186,78 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
       );
     }
 
-    const formData = new FormData();
-    formData.append("eventId", eventId);
-    formData.append("faceDescriptors", JSON.stringify(descriptors));
+    const allUploaded: any[] = [];
 
-    files.forEach((file) => {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const descriptor = descriptors[i];
+
+      const formData = new FormData();
+      formData.append("eventId", eventId);
+      formData.append("faceDescriptors", JSON.stringify([descriptor]));
       formData.append("files", file);
-    });
 
-    try {
-      const response = await fetch("/api/photos/upload", {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        const response = await fetch("/api/photos/upload", {
+          method: "POST",
+          body: formData,
+        });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Upload failed");
-      }
-
-      // Update status for successful uploads
-      setUploadStatus((prev) =>
-        prev.map((status) => {
-          const uploaded = result.uploaded?.find(
-            (p: any) => p.filename === status.filename
-          );
-          const error = result.errors?.find(
-            (e: any) => e.filename === status.filename
-          );
-
-          if (uploaded) {
-            return { ...status, status: "success" };
-          } else if (error) {
-            return { ...status, status: "error", error: error.error };
+        let result;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          result = await response.json();
+        } else {
+          const text = await response.text();
+          if (!response.ok) {
+             throw new Error(response.status === 413 ? "Fichier trop volumineux (limite Vercel de 4.5MB atteinte)." : `Erreur serveur: ${response.status}`);
           }
-          return status;
-        })
-      );
-
-      // Clear files after successful upload
-      setTimeout(() => {
-        setFiles([]);
-        if (onUploadComplete) {
-          onUploadComplete(result.uploaded || []);
+          result = { uploaded: [] };
         }
-      }, 2000);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      setUploadStatus((prev) =>
-        prev.map((status) => ({
-          ...status,
-          status: "error",
-          error: errorMessage,
-        }))
-      );
-    } finally {
+
+        if (!response.ok) {
+          throw new Error(result.error || `Erreur lors de l'envoi (Status ${response.status})`);
+        }
+
+        // Update status for successful upload
+        setUploadStatus((prev) =>
+          prev.map((status) => {
+            if (status.id === i) {
+              const uploaded = result.uploaded?.length > 0;
+              const error = result.errors?.length > 0 ? result.errors[0] : null;
+
+              if (uploaded) {
+                return { ...status, status: "success" };
+              } else if (error) {
+                return { ...status, status: "error", error: error.error };
+              }
+            }
+            return status;
+          })
+        );
+        
+        if (result.uploaded && result.uploaded.length > 0) {
+          allUploaded.push(...result.uploaded);
+        }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        setUploadStatus((prev) =>
+          prev.map((status) => 
+            status.id === i ? { ...status, status: "error", error: errorMessage } : status
+          )
+        );
+      }
+    } // End of the for-loop
+
+    // Clear files after successful upload (or partial success)
+    setTimeout(() => {
+      setFiles([]);
+      if (onUploadComplete && allUploaded.length > 0) {
+        onUploadComplete(allUploaded);
+      }
       setUploading(false);
-    }
+    }, 2000);
   };
 
   return (
