@@ -10,6 +10,7 @@ interface PhotoUploadProps {
 }
 
 interface UploadStatus {
+  id: number;
   filename: string;
   status: "pending" | "extracting" | "uploading" | "success" | "error";
   error?: string;
@@ -154,7 +155,8 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
 
     setUploading(true);
     setUploadStatus(
-      files.map((file) => ({
+      files.map((file, idx) => ({
+        id: idx,
         filename: file.name,
         status: "pending",
       }))
@@ -162,10 +164,11 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
 
     // Extract descriptors sequentially to avoid memory spikes
     const descriptors: (number[] | null)[] = [];
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       setUploadStatus((prev) =>
         prev.map((s) =>
-          s.filename === file.name
+          s.id === i
             ? { ...s, status: "extracting" }
             : s
         )
@@ -176,7 +179,7 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
       
       setUploadStatus((prev) =>
         prev.map((s) =>
-          s.filename === file.name
+          s.id === i
             ? { ...s, status: "uploading" }
             : s
         )

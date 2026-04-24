@@ -138,6 +138,8 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
               setIsExtracting(false);
               if (!descriptor) {
                 setError("Aucun visage détecté. Veuillez réessayer dans un endroit bien éclairé et de face.");
+                setCapturedImage(null);
+                setCapturedBlob(null);
               }
             };
 
@@ -248,7 +250,7 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
                 </button>
                 <button
                   onClick={handleConfirm}
-                  disabled={isExtracting}
+                  disabled={isExtracting || !capturedDescriptor}
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] disabled:opacity-50 disabled:grayscale transition hover:bg-green-400"
                 >
                   <Check className="h-6 w-6" />

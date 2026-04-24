@@ -18,6 +18,7 @@ export default function GuestPage({ params }: GuestPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [matchedPhotos, setMatchedPhotos] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     async function fetchEvent() {
@@ -34,6 +35,38 @@ export default function GuestPage({ params }: GuestPageProps) {
     }
     fetchEvent();
   }, [id]);
+
+  // Periodic polling for new photos every 30 seconds
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (step === "success" && guestId) {
+      interval = setInterval(() => {
+        handleRefresh(true); // silent refresh
+      }, 30000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [step, guestId]);
+
+  const handleRefresh = async (silent = false) => {
+    if (!guestId || refreshing) return;
+    
+    if (!silent) setRefreshing(true);
+    try {
+      const res = await fetch(`/api/guests/${guestId}/matches`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMatchedPhotos(data.photos || []);
+      }
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      if (!silent) setRefreshing(false);
+    }
+  };
 
   const handleCapture = async (blob: Blob, descriptor: number[] | null) => {
     setUploading(true);
@@ -173,6 +206,21 @@ export default function GuestPage({ params }: GuestPageProps) {
               <p className="mt-2 text-slate-400">
                 Nous avons trouvé {matchedPhotos.length} photo(s) de vous.
               </p>
+              
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => handleRefresh()}
+                  disabled={refreshing}
+                  className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-xs font-medium text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
+                >
+                  {refreshing ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3 text-[#5B7CFF]" />
+                  )}
+                  Actualiser la recherche
+                </button>
+              </div>
             </div>
             
             {matchedPhotos.length > 0 ? (

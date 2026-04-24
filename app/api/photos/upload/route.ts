@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       throw new ValidationError("Event ID is required");
     }
 
-    if (!eventId.match(/^[a-z0-9]+$/i)) {
+    if (!eventId.match(/^[a-z0-9_-]+$/i)) {
       throw new ValidationError("Invalid event ID format");
     }
 
@@ -76,6 +76,17 @@ export async function POST(request: Request) {
     // Upload each file
     const uploadedPhotos = [];
     const uploadErrors = [];
+
+    // Pre-parse face descriptors once (instead of inside the loop)
+    let descriptorsArray: any[] | null = null;
+    try {
+      const descriptorsStr = formData.get("faceDescriptors") as string | null;
+      if (descriptorsStr) {
+        descriptorsArray = JSON.parse(descriptorsStr);
+      }
+    } catch (parseErr) {
+      console.error("Failed to parse faceDescriptors:", parseErr);
+    }
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -127,6 +138,7 @@ export async function POST(request: Request) {
           .getPublicUrl(filePath);
 
         // Create photo record in database
+        const descriptor = descriptorsArray?.[i] ?? null;
         const photo = await prisma.photo.create({
           data: {
             eventId,
@@ -136,6 +148,7 @@ export async function POST(request: Request) {
             fileSize: file.size,
             mimeType: file.type,
             metadata: "{}",
+            ...(descriptor ? { faceDescriptor: JSON.stringify(descriptor) } : {}),
           },
           select: {
             id: true,
@@ -147,24 +160,6 @@ export async function POST(request: Request) {
         });
 
         uploadedPhotos.push(photo);
-
-        // Retrieve descriptor from formData array
-        try {
-          const descriptorsStr = formData.get("faceDescriptors") as string | null;
-          if (descriptorsStr) {
-            const descriptorsArray = JSON.parse(descriptorsStr);
-            const descriptor = descriptorsArray[i]; // match by index since files are iterated in order
-            
-            if (descriptor) {
-              await prisma.photo.update({
-                where: { id: photo.id },
-                data: { faceDescriptor: JSON.stringify(descriptor) },
-              });
-            }
-          }
-        } catch (aiError) {
-          console.error(`AI matching failed to parse descriptor for ${photo.id}:`, aiError);
-        }
       } catch (error) {
         const errorMessage =
           error instanceof Error
