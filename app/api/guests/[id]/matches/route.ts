@@ -90,7 +90,7 @@ export async function POST(
           const photoDescriptor = JSON.parse(photo.faceDescriptor!) as number[];
           const score = compareDescriptors(guestDescriptor, photoDescriptor);
           
-          if (score >= FACE_MATCH_THRESHOLD) {
+          if (score >= (1 - FACE_MATCH_THRESHOLD)) {
             newMatches.push({
               guestId,
               photoId: photo.id,
