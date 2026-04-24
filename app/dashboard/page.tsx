@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
+import { Plus, Image as ImageIcon, ArrowLeft, Activity, Users, Camera } from "lucide-react";
 
 export default async function DashboardPage() {
   const { prisma } = await import("@/lib/prisma");
@@ -21,69 +22,99 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#111827] px-4 py-16 text-slate-100">
-      <div className="mx-auto w-full max-w-5xl rounded-2xl border border-white/10 bg-slate-900/60 p-6 shadow-[0_0_40px_rgba(91,124,255,0.08)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[#5B7CFF]">
-              Espace Studio
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold">Dashboard</h1>
-            <p className="mt-3 text-sm text-slate-300">
-              Bienvenue {user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "photographe"}.
-            </p>
+    <main className="min-h-screen bg-[#09090b] text-zinc-100 selection:bg-blue-500/30">
+      {/* Top Navigation Bar */}
+      <div className="sticky top-0 z-40 border-b border-zinc-800/80 bg-[#09090b]/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-sm">
+              <span className="text-xs font-bold text-white">F</span>
+            </div>
+            <span className="text-sm font-medium tracking-tight text-white">
+              Studio<span className="text-blue-500">.ai</span>
+            </span>
           </div>
           <Link
             href="/"
-            className="inline-flex rounded-full border border-white/20 px-4 py-2 text-sm font-medium transition hover:border-white/40"
+            className="group flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
           >
-            Retour a l&apos;accueil
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            Retour au site
           </Link>
         </div>
+      </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-            <p className="text-xs text-slate-400">ID utilisateur</p>
-            <p className="mt-1 truncate text-sm">{userId}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-            <p className="text-xs text-slate-400">Evenements actifs</p>
-            <p className="mt-1 text-sm">{eventCount}</p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4">
-            <p className="text-xs text-slate-400">Photos distribuees</p>
-            <p className="mt-1 text-sm">0 (placeholder)</p>
-          </div>
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Vue d'ensemble</h1>
+          <p className="mt-2 text-lg text-zinc-400">
+            Bienvenue dans votre espace, <span className="text-white">{user?.firstName ?? user?.primaryEmailAddress?.emailAddress ?? "photographe"}</span>.
+          </p>
         </div>
 
         {dbError && (
-          <div className="mt-6 rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-red-200">
-            <p className="text-xs font-semibold uppercase tracking-wider">Erreur Base de Donnees</p>
-            <pre className="mt-2 whitespace-pre-wrap text-xs font-mono">{dbError}</pre>
+          <div className="mb-8 rounded-xl border border-red-500/20 bg-red-500/10 p-4">
+            <p className="text-sm font-medium text-red-400">Erreur de connexion à la base de données</p>
+            <pre className="mt-2 whitespace-pre-wrap text-xs font-mono text-red-300">{dbError}</pre>
           </div>
         )}
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <Link
-            href="/events/new"
-            className="inline-flex items-center justify-center rounded-xl bg-[#5B7CFF] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#7C4DFF]"
-          >
-            Creer un evenement
-          </Link>
-          <Link
-            href="/events"
-            className="inline-flex items-center justify-center rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold text-slate-100 transition hover:border-white/40"
-          >
-            Importer des photos
-          </Link>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Stat Card 1 */}
+          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-zinc-400">Événements Actifs</p>
+              <Activity className="h-4 w-4 text-blue-500" />
+            </div>
+            <p className="mt-4 text-3xl font-semibold text-white">{eventCount}</p>
+          </div>
+
+          {/* Stat Card 2 */}
+          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-zinc-400">Photos Livrées</p>
+              <ImageIcon className="h-4 w-4 text-purple-500" />
+            </div>
+            <p className="mt-4 text-3xl font-semibold text-white">0</p>
+          </div>
+
+          {/* Stat Card 3 */}
+          <div className="rounded-2xl border border-zinc-800/60 bg-zinc-900/40 p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-zinc-400">Invités Reconnus</p>
+              <Users className="h-4 w-4 text-emerald-500" />
+            </div>
+            <p className="mt-4 text-3xl font-semibold text-white">0</p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/events/new"
+              className="group flex h-full flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-sm font-semibold text-zinc-950 transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Plus className="h-5 w-5" />
+              Nouvel événement
+            </Link>
+            <Link
+              href="/events"
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            >
+              <Camera className="h-4 w-4" />
+              Voir mes galeries
+            </Link>
+          </div>
         </div>
 
-        <div className="mt-6 rounded-xl border border-white/10 bg-slate-950/50 p-4">
-          <p className="text-xs text-slate-400">Endpoint protege</p>
-          <p className="mt-1 text-sm text-slate-200">GET /api/me</p>
-          <p className="mt-2 text-xs text-slate-400">
-            Utilisez cet endpoint pour recuperer l&apos;identite connectee depuis votre frontend.
-          </p>
+        <div className="mt-12 rounded-2xl border border-zinc-800/60 bg-zinc-900/20 p-6">
+          <h2 className="text-lg font-semibold text-white">Activité récente</h2>
+          <div className="mt-6 flex flex-col items-center justify-center py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800/50">
+              <ImageIcon className="h-6 w-6 text-zinc-500" />
+            </div>
+            <p className="mt-4 text-sm font-medium text-zinc-300">Aucune activité récente</p>
+            <p className="mt-1 text-sm text-zinc-500">Créez votre premier événement pour commencer.</p>
+          </div>
         </div>
       </div>
     </main>

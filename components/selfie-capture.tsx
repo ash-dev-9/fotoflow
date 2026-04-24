@@ -191,22 +191,22 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
   };
 
   return (
-    <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-slate-950 shadow-2xl">
+    <div className="relative mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-zinc-800/60 bg-[#09090b] shadow-2xl">
       {error ? (
         <div className="flex flex-col items-center justify-center p-12 text-center">
           <div className="mb-4 rounded-full bg-red-500/10 p-4 text-red-500">
             <X className="h-8 w-8" />
           </div>
-          <p className="text-sm text-slate-300">{error}</p>
+          <p className="text-sm text-zinc-300">{error}</p>
           <button
             onClick={startCamera}
-            className="mt-6 rounded-full bg-[#5B7CFF] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#7C4DFF]"
+            className="mt-6 rounded-full bg-white px-6 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
           >
             Réessayer
           </button>
         </div>
       ) : (
-        <div className="relative aspect-[3/4] w-full bg-slate-900">
+        <div className="relative aspect-[3/4] w-full bg-zinc-900">
           {!capturedImage ? (
             <>
               <video
@@ -215,7 +215,7 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
                 playsInline
                 className="h-full w-full object-cover grayscale-[0.2]"
               />
-              <div className="absolute inset-0 border-[20px] border-slate-950/40 pointer-events-none">
+              <div className="absolute inset-0 border-[20px] border-[#09090b]/40 pointer-events-none">
                 <div className="h-full w-full border-2 border-dashed border-white/30 rounded-2xl" />
               </div>
               
@@ -226,7 +226,7 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
                   disabled={isModelLoading}
                   className="group relative flex h-20 w-20 items-center justify-center rounded-full bg-white transition hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
-                  <div className="h-16 w-16 rounded-full border-4 border-slate-950 bg-white" />
+                  <div className="h-16 w-16 rounded-full border-4 border-[#09090b] bg-white" />
                   <div className="absolute -inset-2 animate-pulse rounded-full border-2 border-white/20 group-hover:border-white/40" />
                 </button>
               </div>
@@ -238,20 +238,20 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
                 alt="Selfie capturé"
                 className="h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#09090b]/90 via-[#09090b]/20 to-transparent" />
               
               {/* Post-capture controls */}
               <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
                 <button
                   onClick={resetCapture}
-                  className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-slate-900/60 text-white transition hover:bg-slate-800 hover:text-red-400"
+                  className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-zinc-900/60 text-white backdrop-blur-md transition hover:bg-zinc-800 hover:text-red-400"
                 >
                   <RefreshCw className="h-6 w-6" />
                 </button>
                 <button
                   onClick={handleConfirm}
                   disabled={isExtracting || !capturedDescriptor}
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)] disabled:opacity-50 disabled:grayscale transition hover:bg-green-400"
+                  className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:opacity-50 disabled:grayscale transition hover:bg-blue-400"
                 >
                   <Check className="h-6 w-6" />
                 </button>
@@ -262,18 +262,18 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
           <canvas ref={canvasRef} className="hidden" />
           
           {/* Overlay info */}
-          <div className="absolute left-6 top-6 flex items-center gap-2 rounded-full bg-slate-950/40 px-3 py-1.5 backdrop-blur-md">
+          <div className="absolute left-6 top-6 flex items-center gap-2 rounded-full bg-[#09090b]/40 px-3 py-1.5 backdrop-blur-md">
             <div className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
             <span className="text-[10px] font-bold uppercase tracking-widest text-white">Live Camera</span>
           </div>
         </div>
       )}
       
-      <div className="p-6 text-center">
+      <div className="p-6 text-center bg-[#09090b]">
         <h3 className="text-lg font-semibold text-white">
           {capturedImage ? "Photo prise !" : "Prenez un selfie"}
         </h3>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-zinc-400">
           {isModelLoading 
             ? "Chargement de l'IA (patientez...)" 
             : isExtracting 
