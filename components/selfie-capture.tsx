@@ -224,10 +224,11 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
                 <button
                   onClick={capturePhoto}
                   disabled={isModelLoading}
-                  className="group relative flex h-20 w-20 items-center justify-center rounded-full bg-white transition hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+                  className="group relative flex h-24 w-24 items-center justify-center rounded-full bg-white transition-all hover:scale-110 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_40px_rgba(255,255,255,0.2)]"
                 >
-                  <div className="h-16 w-16 rounded-full border-4 border-[#09090b] bg-white" />
-                  <div className="absolute -inset-2 animate-pulse rounded-full border-2 border-white/20 group-hover:border-white/40" />
+                  <div className="h-20 w-20 rounded-full border-4 border-zinc-950 bg-white" />
+                  <div className="absolute -inset-4 animate-pulse rounded-full border-2 border-white/10 group-hover:border-white/30" />
+                  <Camera className="absolute h-8 w-8 text-zinc-950 opacity-10 group-hover:opacity-20" />
                 </button>
               </div>
             </>
@@ -244,16 +245,16 @@ export function SelfieCapture({ onCapture, onReset }: SelfieCaptureProps) {
               <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-6">
                 <button
                   onClick={resetCapture}
-                  className="flex h-14 w-14 items-center justify-center rounded-full border border-white/20 bg-zinc-900/60 text-white backdrop-blur-md transition hover:bg-zinc-800 hover:text-red-400"
+                  className="flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-zinc-900/60 text-white backdrop-blur-md transition-all hover:bg-zinc-800 hover:text-red-400 hover:scale-110"
                 >
-                  <RefreshCw className="h-6 w-6" />
+                  <RefreshCw className="h-7 w-7" />
                 </button>
                 <button
                   onClick={handleConfirm}
                   disabled={isExtracting || !capturedDescriptor}
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] disabled:opacity-50 disabled:grayscale transition hover:bg-blue-400"
+                  className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_0_30px_rgba(37,99,235,0.4)] disabled:opacity-50 disabled:grayscale transition-all hover:bg-blue-500 hover:scale-110"
                 >
-                  <Check className="h-6 w-6" />
+                  <Check className="h-8 w-8" />
                 </button>
               </div>
             </>

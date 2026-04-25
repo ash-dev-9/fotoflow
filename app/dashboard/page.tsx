@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
-import { Plus, Image as ImageIcon, ArrowLeft, Activity, Users, Camera } from "lucide-react";
+import { Plus, Image as ImageIcon, ArrowLeft, Activity, Users, Camera, Palette } from "lucide-react";
 
 export default async function DashboardPage() {
   const { prisma } = await import("@/lib/prisma");
@@ -102,6 +102,13 @@ export default async function DashboardPage() {
             >
               <Camera className="h-4 w-4" />
               Voir mes galeries
+            </Link>
+            <Link
+              href="/studio"
+              className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/50 px-4 py-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800"
+            >
+              <Palette className="h-4 w-4" />
+              Paramètres du Studio
             </Link>
           </div>
         </div>

@@ -6,8 +6,16 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "FotoFlow.ai - Livraison photo IA",
-  description: "Distribuez automatiquement les photos d'événements grâce à la reconnaissance faciale.",
+  title: "FotoFlow.ai | Livraison de Photos par IA & Reconnaissance Faciale",
+  description: "La plateforme premium pour photographes événementiels. Distribuez automatiquement vos photos aux invités grâce à une reconnaissance faciale sécurisée et ultra-rapide.",
+  keywords: ["photographie", "événement", "IA", "reconnaissance faciale", "galerie photo", "partage photo"],
+  openGraph: {
+    title: "FotoFlow.ai - La Magie du Partage Photo",
+    description: "Distribuez vos photos d'événements instantanément.",
+    images: ["/images/og-image.jpg"],
+  },
+  authors: [{ name: "FotoFlow.ai" }],
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({

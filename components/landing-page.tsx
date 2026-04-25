@@ -98,13 +98,13 @@ export function LandingPage() {
       {/* Header */}
       <header className="fixed top-0 inset-x-0 z-50 border-b border-white/[0.05] bg-[#09090b]/80 backdrop-blur-xl supports-[backdrop-filter]:bg-[#09090b]/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <Link href="/" className="group relative flex items-center gap-2.5 transition-transform hover:scale-105 duration-300">
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-[0_0_20px_rgba(37,99,235,0.2)]">
-              <span className="text-sm font-bold text-white">F</span>
+          <Link href="/" className="group relative flex items-center gap-2.5 transition-all hover:scale-105 duration-500">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 via-blue-500 to-indigo-500 shadow-[0_0_20px_rgba(37,99,235,0.3)] group-hover:shadow-[0_0_30px_rgba(37,99,235,0.5)] transition-shadow">
+              <span className="text-sm font-bold text-white tracking-widest">F</span>
               <div className="absolute inset-0 rounded-xl border border-white/20" />
             </div>
-            <span className="text-base font-semibold tracking-tight text-white">
-              FotoFlow<span className="text-blue-500">.ai</span>
+            <span className="text-lg font-bold tracking-tight text-white">
+              FotoFlow<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600">.ai</span>
             </span>
           </Link>
 
@@ -171,6 +171,11 @@ export function LandingPage() {
                     {item.label}
                   </a>
                 ))}
+                <img
+                  src="/images/hero-mockup.png"
+                  alt="Aperçu de la plateforme FotoFlow sur mobile"
+                  className="w-full object-contain"
+                />
                 <hr className="border-zinc-800" />
                 {!isSignedIn ? (
                   <div className="flex flex-col gap-3">
@@ -247,15 +252,22 @@ export function LandingPage() {
           {/* Hero Image Mockup */}
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" as any }}
+            animate={{ 
+              opacity: 1, 
+              y: [0, -10, 0],
+            }}
+            transition={{ 
+              opacity: { delay: 0.4, duration: 0.8 },
+              y: { repeat: Infinity, duration: 5, ease: "easeInOut" }
+            }}
             className="mx-auto mt-20 max-w-5xl"
           >
-            <div className="relative aspect-video rounded-2xl border border-zinc-800/50 bg-zinc-900/30 p-2 shadow-2xl backdrop-blur-sm sm:rounded-3xl sm:p-4 lg:p-6">
+            <div className="relative aspect-video rounded-2xl border border-zinc-800/50 bg-zinc-900/30 p-2 shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-sm sm:rounded-3xl sm:p-4 lg:p-6">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur opacity-30" />
               <div className="absolute inset-0 rounded-3xl ring-1 ring-white/10 ring-inset" />
               <div className="relative h-full w-full overflow-hidden rounded-xl border border-zinc-800 bg-[#09090b] shadow-inner sm:rounded-2xl">
                 {/* Mockup Content */}
-                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-luminosity" />
+                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-40 mix-blend-luminosity scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/80 to-transparent" />
                 
                 <div className="absolute bottom-0 left-0 w-full p-8 flex justify-between items-end">
@@ -264,17 +276,17 @@ export function LandingPage() {
                       {[1,2,3,4].map((i) => (
                         <div key={i} className="h-10 w-10 rounded-full border-2 border-[#09090b] bg-zinc-800" />
                       ))}
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#09090b] bg-blue-500 text-xs font-bold text-white">+12</div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#09090b] bg-blue-500 text-xs font-bold text-white shadow-lg shadow-blue-500/20">+12</div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-semibold text-white">Soirée Gala 2026</h3>
+                      <h3 className="text-2xl font-semibold text-white tracking-tight">Soirée Gala 2026</h3>
                       <p className="text-zinc-400">142 invités reconnus • 840 photos livrées</p>
                     </div>
                   </div>
                   
                   <div className="hidden sm:flex flex-col gap-3">
                     <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-md">
-                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                       <span className="text-sm font-medium text-white">IA Active</span>
                     </div>
                   </div>
@@ -329,7 +341,7 @@ export function LandingPage() {
                         <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden bg-zinc-950">
                           <img 
                             src={step.image} 
-                            alt={step.title}
+                            alt={`Étape ${idx + 1}: ${step.title}`}
                             className="w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
                           />
                           {/* Overlay Gradient */}
@@ -358,11 +370,16 @@ export function LandingPage() {
             
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {features.map((feature, idx) => (
-                <div key={idx} className="rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-6 backdrop-blur-sm">
-                  <feature.icon className="h-8 w-8 text-blue-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
-                </div>
+                <motion.div 
+                  key={idx}
+                  whileHover={{ y: -5 }}
+                  className="group relative rounded-2xl border border-zinc-800/60 bg-zinc-900/30 p-6 backdrop-blur-sm transition-all hover:border-blue-500/30 hover:bg-zinc-900/50"
+                >
+                  <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <feature.icon className="relative h-8 w-8 text-blue-400 mb-4 transition-transform group-hover:scale-110 group-hover:text-blue-300" />
+                  <h3 className="relative text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                  <p className="relative text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
+                </motion.div>
               ))}
             </div>
           </div>
@@ -382,40 +399,42 @@ export function LandingPage() {
 
             <div className="grid gap-8 max-w-4xl mx-auto md:grid-cols-2">
               {/* Plan 1 */}
-              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-8">
-                <h3 className="text-lg font-semibold text-zinc-300">Starter</h3>
-                <div className="mt-4 flex items-baseline text-5xl font-extrabold text-white">
+              <div className="group relative rounded-[2.5rem] border border-zinc-800 bg-zinc-900/40 p-10 transition-all hover:bg-zinc-900/60">
+                <h3 className="text-xl font-bold text-zinc-300">Starter</h3>
+                <div className="mt-6 flex items-baseline gap-1 text-5xl font-black text-white">
                   Gratuit
                 </div>
-                <p className="mt-4 text-sm text-zinc-400">Parfait pour tester sur vos premiers shootings.</p>
-                <ul className="mt-8 space-y-4 text-sm text-zinc-300">
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-500" /> Jusqu'à 3 événements</li>
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-500" /> 100 photos / événement</li>
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-500" /> IA Standard</li>
+                <p className="mt-4 text-sm text-zinc-500 leading-relaxed">Parfait pour tester sur vos premiers shootings d'événements.</p>
+                <div className="my-10 h-px bg-zinc-800" />
+                <ul className="space-y-5 text-sm text-zinc-400">
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-zinc-600" /> Jusqu'à 3 événements</li>
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-zinc-600" /> 100 photos / événement</li>
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-zinc-600" /> IA Standard</li>
                 </ul>
-                <Link href="/signup" className="mt-8 block w-full rounded-full border border-zinc-700 bg-zinc-800 py-3 text-center text-sm font-semibold text-white hover:bg-zinc-700">
-                  Démarrer
+                <Link href="/signup" className="mt-10 block w-full rounded-2xl border border-zinc-700 bg-zinc-800/50 py-4 text-center text-sm font-bold text-white transition-all hover:bg-zinc-700">
+                  Commencer maintenant
                 </Link>
               </div>
 
               {/* Plan 2 */}
-              <div className="relative rounded-3xl border border-blue-500/50 bg-gradient-to-b from-blue-500/10 to-zinc-900/40 p-8 shadow-[0_0_30px_rgba(37,99,235,0.1)]">
-                <div className="absolute -top-4 right-8 rounded-full bg-blue-500 px-3 py-1 text-xs font-semibold text-white">
-                  Le plus populaire
+              <div className="group relative rounded-[2.5rem] border border-blue-500/30 bg-gradient-to-b from-blue-500/10 to-transparent p-10 shadow-[0_0_80px_rgba(37,99,235,0.05)] transition-all hover:border-blue-500/50">
+                <div className="absolute -top-4 right-10 rounded-full bg-blue-600 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-blue-500/20">
+                  Populaire
                 </div>
-                <h3 className="text-lg font-semibold text-blue-400">Pro Studio</h3>
-                <div className="mt-4 flex items-baseline text-5xl font-extrabold text-white">
-                  39€<span className="text-xl font-medium text-zinc-400">/mois</span>
+                <h3 className="text-xl font-bold text-blue-400">Pro Studio</h3>
+                <div className="mt-6 flex items-baseline gap-1 text-5xl font-black text-white">
+                  39€<span className="text-lg font-medium text-zinc-500 italic">/mois</span>
                 </div>
-                <p className="mt-4 text-sm text-zinc-400">Pour les agences et photographes réguliers.</p>
-                <ul className="mt-8 space-y-4 text-sm text-white">
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-400" /> Événements illimités</li>
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-400" /> Stockage illimité</li>
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-400" /> Marque Blanche Complète</li>
-                  <li className="flex gap-3"><Check className="h-5 w-5 text-blue-400" /> Support prioritaire</li>
+                <p className="mt-4 text-sm text-zinc-400 leading-relaxed">Pour les agences et photographes événementiels réguliers.</p>
+                <div className="my-10 h-px bg-blue-500/20" />
+                <ul className="space-y-5 text-sm text-zinc-200">
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-blue-500" /> Événements illimités</li>
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-blue-500" /> Stockage illimité</li>
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-blue-500" /> Marque Blanche Complète</li>
+                  <li className="flex gap-4 items-center"><Check className="h-5 w-5 text-blue-500" /> Support prioritaire</li>
                 </ul>
-                <Link href="/signup?plan=pro" className="mt-8 block w-full rounded-full bg-white py-3 text-center text-sm font-semibold text-zinc-950 hover:bg-zinc-100">
-                  Passer en Pro
+                <Link href="/signup?plan=pro" className="mt-10 block w-full rounded-2xl bg-white py-4 text-center text-sm font-black text-zinc-950 shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+                  S'abonner en Pro
                 </Link>
               </div>
             </div>

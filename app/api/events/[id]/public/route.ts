@@ -16,6 +16,7 @@ export async function GET(
         id: true,
         name: true,
         date: true,
+        userId: true,
       },
     });
 
@@ -23,8 +24,29 @@ export async function GET(
       throw new NotFoundError("Event not found");
     }
 
-    return Response.json(event);
+    // Fetch studio branding for the event owner
+    let studio = null;
+    try {
+      studio = await prisma.studio.findUnique({
+        where: { userId: event.userId },
+        select: {
+          name: true,
+          logoUrl: true,
+          primaryColor: true,
+        },
+      });
+    } catch (e) {
+      // Studio not configured yet, that's fine
+    }
+
+    return Response.json({
+      id: event.id,
+      name: event.name,
+      date: event.date,
+      studio,
+    });
   } catch (error) {
     return errorToResponse(error);
   }
 }
+

@@ -76,3 +76,15 @@ model Match {
   @@index([guestId])
   @@index([photoId])
 }
+
+model Studio {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  name         String?
+  logoUrl      String?
+  primaryColor String   @default("#3B82F6")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+}

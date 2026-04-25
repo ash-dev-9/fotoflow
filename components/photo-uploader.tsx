@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload, X, Check, AlertCircle } from "lucide-react";
+import { Upload, X, Check, AlertCircle, ArrowRight } from "lucide-react";
 import * as faceapi from "@vladmandic/face-api";
 
 interface PhotoUploadProps {
@@ -264,10 +264,10 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
     <div className="w-full space-y-6">
       {/* Upload Area */}
       <div
-        className={`rounded-xl border-2 border-dashed p-8 transition ${
+        className={`rounded-2xl border-2 border-dashed p-10 transition-all duration-300 ${
           dragActive
-            ? "border-[#5B7CFF] bg-[#5B7CFF]/10"
-            : "border-white/20 bg-slate-950/50"
+            ? "border-blue-500 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.1)]"
+            : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -275,13 +275,15 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
         onDrop={handleDrop}
       >
         <div className="flex flex-col items-center justify-center gap-4">
-          <Upload className="h-12 w-12 text-[#5B7CFF]" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+            <Upload className="h-8 w-8" />
+          </div>
           <div className="text-center">
-            <p className="font-semibold text-white">
-              Déposez vos photos ici ou cliquez pour sélectionner
+            <p className="text-lg font-semibold text-white">
+              Déposez vos photos ici
             </p>
-            <p className="text-sm text-slate-400">
-              PNG, JPG, GIF, WebP jusqu&apos;à 50MB
+            <p className="mt-1 text-sm text-zinc-400">
+              Ou cliquez pour parcourir vos fichiers
             </p>
           </div>
           <input
@@ -295,9 +297,9 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="rounded-lg bg-[#5B7CFF] px-6 py-2 font-medium text-white transition hover:bg-[#7C4DFF]"
+            className="mt-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-zinc-950 transition-all hover:scale-105 hover:bg-zinc-100 active:scale-95"
           >
-            Parcourir les fichiers
+            Sélectionner des photos
           </button>
         </div>
       </div>
@@ -312,7 +314,7 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
             {files.map((file, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/50 p-3"
+                className="group flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-4 transition-colors hover:bg-zinc-900/60"
               >
                 <div className="flex-1 truncate">
                   <p className="truncate text-sm text-white">{file.name}</p>
@@ -342,7 +344,7 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
             {uploadStatus.map((status, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-950/50 p-3"
+                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/40 p-4"
               >
                 <p className="flex-1 truncate text-sm text-slate-300">
                   {status.filename}
@@ -390,9 +392,21 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
           type="button"
           onClick={handleUpload}
           disabled={uploading}
-          className="w-full rounded-lg bg-[#5B7CFF] px-4 py-3 font-semibold text-white transition hover:bg-[#7C4DFF] disabled:cursor-not-allowed disabled:opacity-50"
+          className="group relative w-full overflow-hidden rounded-full bg-white py-4 font-bold text-zinc-950 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100"
         >
-          {uploading ? "Téléchargement en cours..." : `Télécharger ${files.length} fichier(s)`}
+          <span className="relative z-10 flex items-center justify-center gap-2">
+            {uploading ? (
+              <>
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-zinc-950" />
+                Traitement en cours...
+              </>
+            ) : (
+              <>
+                Lancer l'importation de {files.length} photo{files.length > 1 ? "s" : ""}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
+          </span>
         </button>
       )}
     </div>
