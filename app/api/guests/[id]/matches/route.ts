@@ -108,6 +108,17 @@ export async function POST(
           data: newMatches,
           skipDuplicates: true
         });
+
+        // 4. Send Notification
+        const { sendNotification } = await import("@/lib/notifications");
+        const firstPhoto = unmatchedPhotos[0]; // Just take the first one for the preview
+        
+        await sendNotification(guestId, {
+          title: "Nouvelles photos trouvées ! 📸",
+          body: `Nous avons trouvé ${newMatches.length} nouvelle(s) photo(s) de vous à cet événement.`,
+          url: `/e/${guest.eventId}`,
+          photoUrl: firstPhoto.filePath
+        });
       }
     }
 

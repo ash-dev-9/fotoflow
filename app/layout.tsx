@@ -9,13 +9,16 @@ export const metadata: Metadata = {
   title: "FotoFlow.ai | Livraison de Photos par IA & Reconnaissance Faciale",
   description: "La plateforme premium pour photographes événementiels. Distribuez automatiquement vos photos aux invités grâce à une reconnaissance faciale sécurisée et ultra-rapide.",
   keywords: ["photographie", "événement", "IA", "reconnaissance faciale", "galerie photo", "partage photo"],
-  openGraph: {
-    title: "FotoFlow.ai - La Magie du Partage Photo",
-    description: "Distribuez vos photos d'événements instantanément.",
-    images: ["/images/og-image.jpg"],
-  },
   authors: [{ name: "FotoFlow.ai" }],
-  viewport: "width=device-width, initial-scale=1",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "FotoFlow",
+  },
 };
 
 export default function RootLayout({

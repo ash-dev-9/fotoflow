@@ -21,6 +21,7 @@ export async function POST(
     const formData = await request.formData();
     const selfie = formData.get("selfie") as File;
     const email = formData.get("email") as string | null;
+    const phone = formData.get("phone") as string | null;
 
     if (!selfie) {
       throw new ValidationError("Selfie is required");
@@ -61,6 +62,7 @@ export async function POST(
       data: {
         eventId,
         email,
+        phone,
         selfiePath: publicUrl,
         status: "pending",
       },

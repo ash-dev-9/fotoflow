@@ -22,6 +22,7 @@ export default function GuestPage({ params }: GuestPageProps) {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"welcome" | "email" | "capture" | "processing" | "success">("welcome");
 
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ export default function GuestPage({ params }: GuestPageProps) {
     logoUrl: null,
     primaryColor: "#3B82F6",
   });
+  const [selectedPhoto, setSelectedPhoto] = useState<any | null>(null);
 
   useEffect(() => {
     async function fetchEvent() {
@@ -102,6 +104,9 @@ export default function GuestPage({ params }: GuestPageProps) {
     if (email) {
       formData.append("email", email);
     }
+    if (phone) {
+      formData.append("phone", phone);
+    }
 
 
     try {
@@ -133,6 +138,35 @@ export default function GuestPage({ params }: GuestPageProps) {
       setError("Une erreur est survenue lors de l'envoi du selfie.");
       setUploading(false);
       setStep("capture");
+    }
+  };
+
+  const subscribeToPush = async (gId: string) => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        console.warn('Push notifications not supported');
+        return;
+      }
+
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      const permission = await Notification.requestPermission();
+      
+      if (permission !== 'granted') return;
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      });
+
+      await fetch('/api/notifications/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guestId: gId, subscription })
+      });
+
+      alert('Alertes activées ! Vous recevrez une notification dès qu\'une photo est trouvée.');
+    } catch (err) {
+      console.error('Failed to subscribe to push:', err);
     }
   };
 
@@ -245,7 +279,7 @@ export default function GuestPage({ params }: GuestPageProps) {
                 Saisissez votre email pour recevoir une notification dès que de nouvelles photos de vous sont disponibles.
               </p>
               
-              <div className="mt-8">
+              <div className="mt-8 space-y-4">
                 <input
                   type="email"
                   placeholder="votre@email.com"
@@ -253,11 +287,24 @@ export default function GuestPage({ params }: GuestPageProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-6 py-4 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
                 />
+
+                <div className="relative">
+                  <div className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-500 text-sm font-medium">
+                    WhatsApp (optionnel)
+                  </div>
+                  <input
+                    type="tel"
+                    placeholder="+33 6 00 00 00 00"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 pl-40 pr-6 py-4 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                  />
+                </div>
                 
                 <button
                   onClick={() => setStep("capture")}
                   disabled={!email || !email.includes("@")}
-                  className="group relative mt-6 flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl px-6 py-4 text-lg font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+                  className="group relative mt-2 flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl px-6 py-4 text-lg font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
                   style={{ backgroundColor: accent }}
                 >
                   Suivant
@@ -284,17 +331,44 @@ export default function GuestPage({ params }: GuestPageProps) {
         )}
 
         {step === "processing" && (
-          <div className="flex flex-col items-center justify-center rounded-3xl border border-zinc-800 bg-zinc-900/60 p-12 text-center backdrop-blur-xl">
-            <div className="relative mb-8 h-24 w-24">
-              <div className="absolute inset-0 animate-ping rounded-full" style={{ backgroundColor: `${accent}20` }} />
-              <div className="relative flex h-full w-full items-center justify-center rounded-full bg-zinc-900 border" style={{ borderColor: `${accent}40` }}>
-                <Loader2 className="h-10 w-10 animate-spin" style={{ color: accent }} />
+          <div className="relative overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-950 p-12 text-center shadow-[0_0_50px_rgba(59,130,246,0.15)]">
+            {/* Animated Scanning Line */}
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-scan" />
+            
+            <div className="relative mb-10 flex justify-center">
+              <div className="relative h-32 w-32">
+                {/* Outer rotating rings */}
+                <div className="absolute inset-0 animate-[spin_4s_linear_infinite] rounded-full border-2 border-dashed border-blue-500/20" />
+                <div className="absolute inset-2 animate-[spin_3s_linear_infinite_reverse] rounded-full border border-blue-500/30" />
+                
+                {/* Center Core */}
+                <div className="absolute inset-6 flex items-center justify-center rounded-full bg-zinc-900 border border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+                  <div className="relative flex flex-col items-center">
+                    <Loader2 className="h-10 w-10 animate-spin text-blue-400" />
+                    <div className="absolute -bottom-1 flex gap-1">
+                      <span className="h-1 w-1 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: '0s' }} />
+                      <span className="h-1 w-1 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: '0.2s' }} />
+                      <span className="h-1 w-1 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: '0.4s' }} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <h2 className="text-xl font-semibold italic text-zinc-100">&quot;La magie opère...&quot;</h2>
-            <p className="mt-4 text-sm text-zinc-400">
-              Notre IA scanne la galerie pour retrouver vos plus beaux moments.
-            </p>
+
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold tracking-tight text-white">Analyse faciale en cours...</h2>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-zinc-400">
+                  Identification des descripteurs biométriques unique
+                </p>
+                <div className="mx-auto h-1 w-48 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-full bg-blue-500 animate-progress" />
+                </div>
+              </div>
+              <p className="text-xs text-zinc-500 italic mt-6">
+                &quot;Recherche parmi {matchedPhotos.length > 0 ? 'les photos de' : 'la galerie de'} l&apos;événement...&quot;
+              </p>
+            </div>
           </div>
         )}
 
@@ -323,6 +397,27 @@ export default function GuestPage({ params }: GuestPageProps) {
                   Actualiser la recherche
                 </button>
               </div>
+
+              {/* Notification Banner */}
+              <div className="mt-8 overflow-hidden rounded-2xl border border-blue-500/20 bg-blue-500/5 p-6 backdrop-blur-xl transition-all hover:bg-blue-500/10">
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:text-left">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.3)]">
+                      <Sparkles className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white">Être alerté en direct ?</h3>
+                      <p className="text-xs text-zinc-400">Recevez une notification dès que de nouvelles photos de vous sont ajoutées.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => guestId && subscribeToPush(guestId)}
+                    className="w-full sm:w-auto rounded-xl bg-white px-6 py-3 text-sm font-bold text-zinc-950 transition-all hover:scale-105 active:scale-95 shadow-lg"
+                  >
+                    Activer les alertes
+                  </button>
+                </div>
+              </div>
             </div>
             
             {matchedPhotos.length > 0 ? (
@@ -330,7 +425,8 @@ export default function GuestPage({ params }: GuestPageProps) {
                 {matchedPhotos.map((photo, i) => (
                   <div 
                     key={photo.id} 
-                    className="group relative aspect-[3/4] overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800/60 shadow-xl transition-all hover:border-blue-500/30"
+                    onClick={() => setSelectedPhoto(photo)}
+                    className="group relative aspect-[3/4] cursor-zoom-in overflow-hidden rounded-2xl bg-zinc-900 border border-zinc-800/60 shadow-xl transition-all hover:border-blue-500/30"
                     style={{ 
                       animation: `fadeInUp 0.6s ease-out forwards ${i * 0.1}s`,
                       opacity: 0,
@@ -343,15 +439,9 @@ export default function GuestPage({ params }: GuestPageProps) {
                       className="h-full w-full object-cover transition duration-700 group-hover:scale-110" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <a 
-                      href={photo.filePath} 
-                      download 
-                      target="_blank"
-                      className="absolute bottom-4 right-4 flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95"
-                      style={{ backgroundColor: `${accent}DD` }}
-                    >
-                      <Download className="h-6 w-6" />
-                    </a>
+                    <div className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-2xl backdrop-blur-xl transition-all duration-300 group-hover:scale-110 active:scale-95" style={{ backgroundColor: `${accent}DD` }}>
+                      <Sparkles className="h-5 w-5" />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -385,6 +475,60 @@ export default function GuestPage({ params }: GuestPageProps) {
           </div>
         )}
       </div>
+
+      {/* Lightbox Modal */}
+      {selectedPhoto && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 animate-in fade-in duration-300"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div 
+            className="relative max-w-4xl w-full h-full flex flex-col items-center justify-center gap-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute top-0 right-0 p-4 text-white/50 hover:text-white transition-colors"
+            >
+              Fermer
+            </button>
+            
+            <div className="relative group w-full max-h-[80vh] flex justify-center">
+              <img 
+                src={selectedPhoto.filePath} 
+                alt="Enlarged view" 
+                className="max-w-full max-h-[80vh] object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+
+            <div className="flex items-center gap-4">
+              <a 
+                href={selectedPhoto.filePath} 
+                download 
+                className="flex items-center gap-3 rounded-2xl px-8 py-4 text-lg font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-xl"
+                style={{ backgroundColor: accent }}
+              >
+                <Download className="h-6 w-6" />
+                Télécharger la photo
+              </a>
+              <button 
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: event?.name,
+                      text: 'Regarde ma photo de l\'événement !',
+                      url: selectedPhoto.filePath
+                    });
+                  }
+                }}
+                className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800 text-white transition-all hover:bg-zinc-700 active:scale-95"
+              >
+                <Mail className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

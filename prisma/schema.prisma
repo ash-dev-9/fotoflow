@@ -54,10 +54,12 @@ model Guest {
   eventId      String
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   email        String?
+  phone        String?
   selfiePath   String
   faceDescriptor String? // Stringified JSON of the face vector
   status       String   @default("pending")
   matches      Match[]
+  notificationSubscription NotificationSubscription?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -77,6 +79,16 @@ model Match {
   @@unique([guestId, photoId])
   @@index([guestId])
   @@index([photoId])
+}
+
+model NotificationSubscription {
+  id        String   @id @default(cuid())
+  guestId   String   @unique
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model Studio {
