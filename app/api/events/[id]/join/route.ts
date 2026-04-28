@@ -20,6 +20,7 @@ export async function POST(
     // Parse form data
     const formData = await request.formData();
     const selfie = formData.get("selfie") as File;
+    const email = formData.get("email") as string | null;
 
     if (!selfie) {
       throw new ValidationError("Selfie is required");
@@ -59,10 +60,12 @@ export async function POST(
     const guest = await prisma.guest.create({
       data: {
         eventId,
+        email,
         selfiePath: publicUrl,
         status: "pending",
       },
     });
+
 
     // --- AI MAGIC START ---
     try {

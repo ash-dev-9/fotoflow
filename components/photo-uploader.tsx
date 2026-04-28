@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Upload, X, Check, AlertCircle, ArrowRight } from "lucide-react";
+import { Upload, X, Check, AlertCircle, ArrowRight, Radio, FolderOpen, Zap, Loader2 } from "lucide-react";
+
 import * as faceapi from "@vladmandic/face-api";
 
 interface PhotoUploadProps {
@@ -23,7 +24,12 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [isModelLoading, setIsModelLoading] = useState(true);
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [directoryHandle, setDirectoryHandle] = useState<any>(null);
+  const [processedFiles, setProcessedFiles] = useState<Set<string>>(new Set());
+  const [isWatching, setIsWatching] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     const loadModels = async () => {
@@ -41,6 +47,104 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
     };
     loadModels();
   }, []);
+
+  // Directory Watcher Loop
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isWatching && directoryHandle && !uploading) {
+      interval = setInterval(async () => {
+        await scanDirectory();
+      }, 5000); // Scan every 5 seconds
+    }
+    return () => clearInterval(interval);
+  }, [isWatching, directoryHandle, processedFiles, uploading]);
+
+  const scanDirectory = async () => {
+    if (!directoryHandle) return;
+    
+    try {
+      const newFiles: File[] = [];
+      // @ts-ignore - File System Access API
+      for await (const entry of directoryHandle.values()) {
+        if (entry.kind === 'file' && !processedFiles.has(entry.name)) {
+          if (entry.name.match(/\.(jpg|jpeg|png|webp)$/i)) {
+            const file = await entry.getFile();
+            newFiles.push(file);
+          }
+        }
+      }
+      
+      if (newFiles.length > 0) {
+        // Add to processed set immediately to avoid double processing
+        const newProcessed = new Set(processedFiles);
+        newFiles.forEach(f => newProcessed.add(f.name));
+        setProcessedFiles(newProcessed);
+        
+        // Auto upload
+        handleAutoUpload(newFiles);
+      }
+    } catch (err) {
+      console.error("Directory scan failed:", err);
+      setIsWatching(false);
+    }
+  };
+
+  const startWatching = async () => {
+    try {
+      // @ts-ignore
+      const handle = await window.showDirectoryPicker({
+        mode: 'read'
+      });
+      setDirectoryHandle(handle);
+      
+      // Initial scan to mark existing files as processed (so we only upload NEW ones)
+      const existing = new Set<string>();
+      // @ts-ignore
+      for await (const entry of handle.values()) {
+        if (entry.kind === 'file') existing.add(entry.name);
+      }
+      setProcessedFiles(existing);
+      setIsWatching(true);
+      setIsLiveMode(true);
+    } catch (err) {
+      console.error("Failed to access directory:", err);
+    }
+  };
+
+  const handleAutoUpload = async (newFiles: File[]) => {
+    // This is a simplified version of handleUpload for background processing
+    setUploading(true);
+    
+    const allUploaded: any[] = [];
+    
+    for (const file of newFiles) {
+      try {
+        const descriptor = await extractFaceDescriptor(file);
+        const formData = new FormData();
+        formData.append("eventId", eventId);
+        formData.append("faceDescriptors", JSON.stringify([descriptor]));
+        formData.append("files", file);
+
+        const response = await fetch("/api/photos/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.uploaded) allUploaded.push(...result.uploaded);
+        }
+      } catch (err) {
+        console.error(`Auto-upload failed for ${file.name}:`, err);
+      }
+    }
+
+    if (onUploadComplete && allUploaded.length > 0) {
+      onUploadComplete(allUploaded);
+    }
+    setUploading(false);
+  };
+
 
   const extractFaceDescriptor = async (file: File): Promise<number[] | null> => {
     if (isModelLoading) return null;
@@ -261,48 +365,132 @@ export function PhotoUploader({ eventId, onUploadComplete }: PhotoUploadProps) {
   };
 
   return (
-    <div className="w-full space-y-6">
-      {/* Upload Area */}
-      <div
-        className={`rounded-2xl border-2 border-dashed p-10 transition-all duration-300 ${
-          dragActive
-            ? "border-blue-500 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.1)]"
-            : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
-        }`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <div className="flex flex-col items-center justify-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
-            <Upload className="h-8 w-8" />
-          </div>
-          <div className="text-center">
-            <p className="text-lg font-semibold text-white">
-              Déposez vos photos ici
-            </p>
-            <p className="mt-1 text-sm text-zinc-400">
-              Ou cliquez pour parcourir vos fichiers
-            </p>
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="mt-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-zinc-950 transition-all hover:scale-105 hover:bg-zinc-100 active:scale-95"
-          >
-            Sélectionner des photos
-          </button>
-        </div>
+    <div className="w-full space-y-8">
+      {/* Mode Selection */}
+      <div className="flex gap-4 p-1 bg-zinc-950 rounded-2xl border border-zinc-800/60">
+        <button
+          onClick={() => setIsLiveMode(false)}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${!isLiveMode ? 'bg-zinc-800 text-white shadow-xl' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+          <Upload className="h-4 w-4" />
+          Manuel
+        </button>
+        <button
+          onClick={() => {
+            if (!directoryHandle) {
+              startWatching();
+            } else {
+              setIsLiveMode(true);
+            }
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${isLiveMode ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+          <Radio className={`h-4 w-4 ${isWatching ? 'animate-pulse text-red-400' : ''}`} />
+          Live Cam (Auto)
+        </button>
       </div>
+
+      {!isLiveMode ? (
+        /* Manual Upload Area */
+        <div
+          className={`rounded-2xl border-2 border-dashed p-10 transition-all duration-300 ${
+            dragActive
+              ? "border-blue-500 bg-blue-500/5 shadow-[0_0_30px_rgba(59,130,246,0.1)]"
+              : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.1)]">
+              <Upload className="h-8 w-8" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-semibold text-white">
+                Déposez vos photos ici
+              </p>
+              <p className="mt-1 text-sm text-zinc-400">
+                Ou cliquez pour parcourir vos fichiers
+              </p>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 rounded-full bg-white px-8 py-2.5 text-sm font-semibold text-zinc-950 transition-all hover:scale-105 hover:bg-zinc-100 active:scale-95"
+            >
+              Sélectionner des photos
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Live Mode Area */
+        <div className="rounded-3xl border border-blue-500/20 bg-blue-500/5 p-8 backdrop-blur-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4">
+            <Zap className={`h-6 w-6 ${isWatching ? 'text-yellow-400 animate-bounce' : 'text-zinc-700'}`} />
+          </div>
+          
+          <div className="flex flex-col items-center text-center gap-6">
+            <div className={`h-20 w-20 rounded-2xl flex items-center justify-center border-2 transition-all ${isWatching ? 'bg-blue-600 border-blue-400 shadow-[0_0_40px_rgba(37,99,235,0.4)]' : 'bg-zinc-900 border-zinc-800'}`}>
+              <FolderOpen className={`h-10 w-10 ${isWatching ? 'text-white' : 'text-zinc-600'}`} />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">
+                {isWatching ? "Mode Live Activé" : "Connecter votre dossier"}
+              </h3>
+              <p className="text-sm text-zinc-400 max-w-xs mx-auto">
+                {isWatching 
+                  ? `Surveillance du dossier : ${directoryHandle?.name}. Les nouvelles photos seront uploadées automatiquement.`
+                  : "Sélectionnez le dossier où votre appareil photo enregistre les images (via tethering ou Wi-Fi)."}
+              </p>
+            </div>
+
+            {isWatching ? (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold border border-emerald-500/20">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  EN ÉCOUTE
+                </div>
+                <button 
+                  onClick={() => setIsWatching(false)}
+                  className="text-xs text-zinc-500 hover:text-red-400 underline underline-offset-4"
+                >
+                  Arrêter
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={startWatching}
+                className="group relative flex items-center gap-3 overflow-hidden rounded-2xl bg-white px-8 py-4 text-sm font-bold text-zinc-950 transition-all hover:scale-105 active:scale-95 shadow-2xl"
+              >
+                <FolderOpen className="h-5 w-5" />
+                Choisir le dossier source
+              </button>
+            )}
+
+            {uploading && (
+              <div className="mt-4 flex items-center gap-3 text-blue-400 text-sm font-medium animate-pulse">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Importation automatique en cours...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
 
       {/* File List */}
       {files.length > 0 && (

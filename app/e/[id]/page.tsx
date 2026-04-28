@@ -2,7 +2,8 @@
 
 import { useState, useEffect, use } from "react";
 import { SelfieCapture } from "@/components/selfie-capture";
-import { Sparkles, Loader2, CheckCircle2, Camera, Download } from "lucide-react";
+import { Sparkles, Loader2, CheckCircle2, Camera, Download, Mail, ArrowRight } from "lucide-react";
+
 import Link from "next/link";
 
 interface GuestPageProps {
@@ -19,8 +20,9 @@ export default function GuestPage({ params }: GuestPageProps) {
   const { id } = use(params);
   const [event, setEvent] = useState<{ name: string; date: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [step, setStep] = useState<"welcome" | "capture" | "processing" | "success">("welcome");
+  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"welcome" | "email" | "capture" | "processing" | "success">("welcome");
+
   const [error, setError] = useState<string | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [matchedPhotos, setMatchedPhotos] = useState<any[]>([]);
@@ -96,6 +98,10 @@ export default function GuestPage({ params }: GuestPageProps) {
     if (descriptor) {
       formData.append("faceDescriptor", JSON.stringify(descriptor));
     }
+    if (email) {
+      formData.append("email", email);
+    }
+
 
     try {
       const res = await fetch(`/api/events/${id}/join`, {
@@ -211,7 +217,7 @@ export default function GuestPage({ params }: GuestPageProps) {
                 L'IA va scanner l'album de l'événement pour isoler uniquement vos photos. Prenez un selfie pour commencer l'identification.
               </p>
               <button
-                onClick={() => setStep("capture")}
+                onClick={() => setStep("email")}
                 className="group relative mt-10 flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl px-6 py-5 text-lg font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ backgroundColor: accent }}
               >
@@ -226,6 +232,48 @@ export default function GuestPage({ params }: GuestPageProps) {
             </div>
           </div>
         )}
+
+        {step === "email" && (
+          <div className="text-center">
+            <div className="relative group rounded-3xl border border-zinc-800 bg-zinc-900/40 p-10 shadow-2xl backdrop-blur-xl transition-all">
+              <div className="mb-6 mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/50">
+                <Mail className="h-8 w-8" style={{ color: accent }} />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Où envoyer vos photos ?</h2>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-400">
+                Saisissez votre email pour recevoir une notification dès que de nouvelles photos de vous sont disponibles.
+              </p>
+              
+              <div className="mt-8">
+                <input
+                  type="email"
+                  placeholder="votre@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-800 bg-zinc-950 px-6 py-4 text-white placeholder:text-zinc-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                />
+                
+                <button
+                  onClick={() => setStep("capture")}
+                  disabled={!email || !email.includes("@")}
+                  className="group relative mt-6 flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl px-6 py-4 text-lg font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+                  style={{ backgroundColor: accent }}
+                >
+                  Suivant
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <button 
+                onClick={() => setStep("welcome")}
+                className="mt-6 text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Retour
+              </button>
+            </div>
+          </div>
+        )}
+
 
         {step === "capture" && (
           <SelfieCapture 

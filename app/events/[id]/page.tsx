@@ -6,7 +6,10 @@ import Link from "next/link";
 import { ArrowLeft, Share2, Copy, Check } from "lucide-react";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { PhotoGallery } from "@/components/photo-gallery";
+import { GuestList } from "@/components/guest-list";
 import { QRCodeSVG } from "qrcode.react";
+import { Users } from "lucide-react";
+
 
 interface EventDetailsProps {
   params: Promise<{ id: string }>;
@@ -66,7 +69,22 @@ export default function EventDetailsPage({ params }: EventDetailsProps) {
               <h2 className="text-2xl font-bold mb-8">Galerie de l'événement</h2>
               <PhotoGallery key={refreshGallery.toString()} eventId={id} />
             </div>
+
+            {/* Guests / Leads Section */}
+            <div className="rounded-3xl border border-zinc-800/60 bg-zinc-900/30 p-8 shadow-2xl backdrop-blur-xl">
+              <h2 className="text-2xl font-bold mb-8 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
+                  <Users className="h-6 w-6" />
+                </div>
+                Invités & Leads
+              </h2>
+              <p className="mb-8 text-sm text-zinc-400">
+                Liste des invités ayant scanné le QR Code. Utilisez ces emails pour vos analyses marketing.
+              </p>
+              <GuestList eventId={id} />
+            </div>
           </div>
+
 
           {/* Sidebar / Sharing */}
           <div className="space-y-8">

@@ -15,3 +15,5 @@ dev.db-journal
 *.log
 node_modules
 /public/uploads/
+
+.vercel

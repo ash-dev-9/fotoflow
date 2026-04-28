@@ -53,6 +53,7 @@ model Guest {
   id           String   @id @default(cuid())
   eventId      String
   event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  email        String?
   selfiePath   String
   faceDescriptor String? // Stringified JSON of the face vector
   status       String   @default("pending")
@@ -62,6 +63,7 @@ model Guest {
 
   @@index([eventId])
 }
+
 
 model Match {
   id        String   @id @default(cuid())
