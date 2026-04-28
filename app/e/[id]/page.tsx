@@ -20,6 +20,7 @@ export default function GuestPage({ params }: GuestPageProps) {
   const { id } = use(params);
   const [event, setEvent] = useState<{ name: string; date: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [email, setEmail] = useState("");
   const [step, setStep] = useState<"welcome" | "email" | "capture" | "processing" | "success">("welcome");
 
